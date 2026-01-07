@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+/* 1. Sinkronisasi Tema dengan Tailwind v4 */
+@theme {
+  --color-background: #050505;
+  --color-foreground: #ffffff;
+  --color-primary: #2563eb; /* Biru King Rental */
+  
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* 2. Global Styling */
+@layer base {
+  body {
+    @apply bg-background text-foreground antialiased selection:bg-primary selection:text-white;
+    overflow-x: hidden;
+  }
+}
+
+/* 3. Custom Scrollbar Mewah */
+@layer utilities {
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #050505;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #18181b;
+    border-radius: 10px;
+    border: 1px solid #27272a;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #2563eb; /* Berubah jadi biru saat dihover */
+  }
+}
+
+/* 4. Animasi Halus (UC-03 & UC-04) */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* 5. Efek Glassmorphism Modern */
+.glass {
+  @apply bg-white/3 backdrop-blur-xl border border-white/10;
+}
+
+/* 6. Utility Image Modern (UC-03) */
+/* Pastikan class "image-modern" dipasang di tag <img> */
+.image-modern {
+  filter: grayscale(100%) brightness(0.8) contrast(1.1);
+  transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.group:hover .image-modern {
+  filter: grayscale(0%) brightness(1) contrast(1);
+  transform: scale(1.05);
+}
+
+/* 7. Card Highlight Effect (UC-04) */
+.card-king {
+  @apply relative overflow-hidden rounded-[2rem] bg-zinc-900 border border-zinc-800 transition-all duration-500;
+}
+
+.card-king:hover {
+  @apply border-primary/50 shadow-[0_0_30px_rgba(37,99,235,0.1)];
+}
