@@ -36,8 +36,11 @@ export default function BentoGrid({ vehicles, onBooking }: BentoGridProps) {
             </span>
           </div>
 
-          {/* Vehicle Image */}
-          <div className="relative h-64 overflow-hidden">
+          {/* Vehicle Image - TAMBAHAN: onClick untuk Detail */}
+          <div 
+            className="relative h-64 overflow-hidden cursor-pointer" 
+            onClick={() => onBooking(car)}
+          >
             <img 
               src={car.img} 
               alt={car.name}
@@ -49,9 +52,12 @@ export default function BentoGrid({ vehicles, onBooking }: BentoGridProps) {
           {/* Vehicle Info - UC-04: Cek Detail */}
           <div className="p-8 -mt-12 relative z-20">
             <div className="flex justify-between items-end mb-6">
-              <div>
+              {/* Judul - TAMBAHAN: onClick & cursor-pointer */}
+              <div className="cursor-pointer" onClick={() => onBooking(car)}>
                 <p className="text-blue-500 text-xs font-bold uppercase tracking-tighter mb-1">{car.type}</p>
-                <h3 className="text-2xl font-black text-white leading-none">{car.name}</h3>
+                <h3 className="text-2xl font-black text-white leading-none group-hover:text-blue-400 transition-colors">
+                  {car.name}
+                </h3>
               </div>
               <div className="text-right">
                 <p className="text-zinc-500 text-[10px] uppercase font-bold">Mulai Dari</p>

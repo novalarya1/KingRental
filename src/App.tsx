@@ -5,12 +5,13 @@ import { jwtDecode } from 'jwt-decode';
 // Components
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
-import About from './components/About'; // Ditambahkan
+import About from './components/About'; 
 import BentoGrid from './components/BentoGrid';
 import LoginModal from './components/LoginModal';
 import RegisterModal from './components/RegisterModal';
 import Contact from './components/Contact';
 import FloatingContact from './components/FloatingContact';
+import VehicleDetailModal from './components/VehicleDetailModal'; // Import Komponen Baru
 
 // Styles
 import './App.css';
@@ -52,6 +53,10 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  // --- NEW STATE FOR DETAIL ---
+  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+
   // --- 3. Mock Data ---
   const [vehicles] = useState<Vehicle[]>([
     { id: '1', name: 'Toyota Alphard', type: 'Mobil', price: 2500000, status: 'Available', seats: 7, transmission: 'AT', img: 'https://images.unsplash.com/photo-1616422285623-13ff0162193c?q=80&w=600' },
@@ -82,7 +87,6 @@ export default function App() {
   const handleGoogleSuccess = (credentialResponse: any) => {
     try {
       const decoded: any = jwtDecode(credentialResponse.credential);
-      // Admin Check (Ganti email ini dengan email admin Anda)
       const isAdmin = decoded.email === 'baiqdewi2626@gmail.com'; 
       
       setUser({
@@ -126,6 +130,12 @@ export default function App() {
     setBookings(prev => prev.map(b => b.id === id ? { ...b, status: nextStatus } : b));
   };
 
+  // --- HANDLER FOR DETAIL ---
+  const handleOpenDetail = (vehicle: Vehicle) => {
+    setSelectedVehicle(vehicle);
+    setIsDetailOpen(true);
+  };
+
   return (
     <div className="bg-black min-h-screen text-white font-sans selection:bg-blue-600/30 overflow-x-hidden">
       
@@ -157,7 +167,6 @@ export default function App() {
               currentFilter={filter} 
             />
             
-            {/* --- SEKSI ABOUT DITAMBAHKAN DISINI --- */}
             <About />
             
             <section id="catalog" className="max-w-7xl mx-auto py-24 px-6">
@@ -176,7 +185,10 @@ export default function App() {
                 </div>
               ) : filteredVehicles.length > 0 ? (
                 <div className="animate-in fade-in slide-in-from-bottom-8 duration-1000">
-                  <BentoGrid vehicles={filteredVehicles} onBooking={handleBooking} />
+                  <BentoGrid 
+                    vehicles={filteredVehicles} 
+                    onBooking={handleOpenDetail} // Sekarang klik unit membuka detail
+                  />
                 </div>
               ) : (
                 <div className="text-center py-32 bg-zinc-900/10 rounded-[4rem] border border-dashed border-white/5 backdrop-blur-sm">
@@ -296,6 +308,13 @@ export default function App() {
       <FloatingContact />
 
       {/* --- MODALS --- */}
+      <VehicleDetailModal 
+        isOpen={isDetailOpen}
+        vehicle={selectedVehicle}
+        onClose={() => setIsDetailOpen(false)}
+        onBooking={handleBooking}
+      />
+
       <LoginModal 
         isOpen={isLoginOpen} 
         onClose={() => setIsLoginOpen(false)} 
