@@ -172,9 +172,12 @@ export default function App() {
             <section id="catalog" className="max-w-7xl mx-auto py-24 px-6">
               <div className="flex items-center gap-6 mb-16">
                 <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
-                <h2 className="text-4xl md:text-5xl font-black italic tracking-tighter uppercase text-center bg-gradient-to-b from-white to-zinc-500 bg-clip-text text-transparent">
-                  Our Fleet
-                </h2>
+                <div className="text-center">
+                  <h2 className="text-4xl md:text-5xl font-black italic tracking-tighter uppercase text-center bg-gradient-to-b from-white to-zinc-500 bg-clip-text text-transparent">
+                    Our Fleet
+                  </h2>
+                  <p className="text-[10px] text-blue-500 font-bold tracking-[0.5em] uppercase mt-2">Elite Selection</p>
+                </div>
                 <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
               </div>
 
