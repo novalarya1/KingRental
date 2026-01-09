@@ -94,7 +94,7 @@ export default function BentoGrid({ vehicles, onBooking }: BentoGridProps) {
                 : 'bg-zinc-800 text-zinc-600 cursor-not-allowed'
               }`}
             >
-              {car.status === 'Available' ? 'SEWA SEKARANG (UC-05)' : 'TIDAK TERSEDIA'}
+              {car.status === 'Available' ? 'SEWA SEKARANG' : 'TIDAK TERSEDIA'}
             </button>
           </div>
         </div>
