@@ -47,8 +47,8 @@ export default function App() {
   const [vehicles] = useState<Vehicle[]>([
     { id: '1', name: 'Toyota Alphard', type: 'Mobil', price: 2500000, status: 'Available', seats: 7, transmission: 'AT', img: 'https://images.unsplash.com/photo-1616422285623-13ff0162193c?q=80&w=600' },
     { id: '2', name: 'Porsche 911', type: 'Mobil', price: 5000000, status: 'Available', seats: 2, transmission: 'AT', img: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=600' },
-    { id: '3', name: 'Vespa Primavera', type: 'Motor', price: 250000, status: 'Available', seats: 2, transmission: 'AT', img: 'https://images.unsplash.com/photo-1591123109285-125038b47361?q=80&w=600' },
-    { id: '4', name: 'Kawasaki ZX25R', type: 'Motor', price: 600000, status: 'On Rent', seats: 2, transmission: 'MT', img: 'https://images.unsplash.com/photo-1635073910831-2463b158093d?q=80&w=600' },
+    { id: '3', name: 'Vespa Primavera', type: 'Motor', price: 250000, status: 'Available', seats: 2, transmission: 'AT', img: 'https://www.thedrive.com/wp-content/uploads/content/archive-images/vespareview_inline4.jpg?strip=all&quality=85' },
+    { id: '4', name: 'Kawasaki ZX25R', type: 'Motor', price: 600000, status: 'On Rent', seats: 2, transmission: 'MT', img: 'https://img.autofun.co.id/file/4a1fba86ab0c4118a6f240b4ba6cb3f7.jpg' },
   ]);
   
   const [bookings, setBookings] = useState<Booking[]>([]);
