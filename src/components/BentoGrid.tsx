@@ -1,6 +1,5 @@
 import React from 'react';
 import { Users, Gauge, ShieldCheck } from 'lucide-react';
-// Pastikan path ini benar sesuai lokasi file types.ts Anda
 import type { Vehicle } from '../types';
 
 interface BentoGridProps {
@@ -16,7 +15,7 @@ export default function BentoGrid({ vehicles, onBooking }: BentoGridProps) {
           key={car.id} 
           className="group relative bg-zinc-900 border border-zinc-800 rounded-[2.5rem] overflow-hidden hover:border-blue-500/50 transition-all duration-500 shadow-2xl"
         >
-          {/* Status Badge - Menangani Available, On Rent, & Maintenance */}
+          {/* Status Badge */}
           <div className="absolute top-5 left-5 z-10">
             <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest backdrop-blur-md border ${
               car.status === 'Available' 
@@ -25,14 +24,15 @@ export default function BentoGrid({ vehicles, onBooking }: BentoGridProps) {
                 ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
                 : 'bg-red-500/10 text-red-500 border-red-500/20'
             }`}>
-              {car.status === 'On Rent' ? 'Sedang Disewa' : car.status}
+              {/* Teks diganti menjadi On Rent sesuai permintaan */}
+              {car.status} 
             </span>
           </div>
 
           {/* Vehicle Image */}
           <div 
             className="relative h-64 overflow-hidden cursor-pointer" 
-            onClick={() => onBooking(car)}
+            onClick={() => car.status === 'Available' && onBooking(car)}
           >
             <img 
               src={car.img} 
@@ -45,7 +45,10 @@ export default function BentoGrid({ vehicles, onBooking }: BentoGridProps) {
           {/* Vehicle Info */}
           <div className="p-8 -mt-12 relative z-20">
             <div className="flex justify-between items-end mb-6">
-              <div className="cursor-pointer" onClick={() => onBooking(car)}>
+              <div 
+                className={car.status === 'Available' ? 'cursor-pointer' : ''} 
+                onClick={() => car.status === 'Available' && onBooking(car)}
+              >
                 <p className="text-blue-500 text-xs font-bold uppercase tracking-tighter mb-1">{car.type}</p>
                 <h3 className="text-2xl font-black text-white leading-none group-hover:text-blue-400 transition-colors">
                   {car.name}
@@ -54,7 +57,7 @@ export default function BentoGrid({ vehicles, onBooking }: BentoGridProps) {
               <div className="text-right">
                 <p className="text-zinc-500 text-[10px] uppercase font-bold">Mulai Dari</p>
                 <p className="text-xl font-black text-white">
-                  Rp {car.price.toLocaleString()}
+                  Rp {car.price.toLocaleString('id-ID')}
                   <span className="text-zinc-500 text-xs font-normal">/hari</span>
                 </p>
               </div>
@@ -76,7 +79,7 @@ export default function BentoGrid({ vehicles, onBooking }: BentoGridProps) {
               </div>
             </div>
 
-            {/* Action Button - Cek ketersediaan */}
+            {/* Action Button */}
             <button 
               onClick={() => onBooking(car)}
               disabled={car.status !== 'Available'}
