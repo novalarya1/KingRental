@@ -35,8 +35,8 @@ export default function Contact() {
             </div>
             <h3 className="text-xl font-bold mb-2">Email Inquiry</h3>
             <p className="text-zinc-500 text-sm mb-6">Kerjasama korporat atau sewa jangka panjang.</p>
-            <a href="mailto:baiqdewi2626@gmail.com" className="text-purple-500 font-black text-sm tracking-widest uppercase hover:underline">
-              baiqdewi2626@gmail.com
+            <a href="mailto:kingrental@gmail.com" className="text-purple-500 font-black text-sm tracking-widest uppercase hover:underline">
+              kingrental@gmail.com
             </a>
           </div>
 
