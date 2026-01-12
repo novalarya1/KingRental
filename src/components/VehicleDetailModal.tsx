@@ -1,16 +1,7 @@
 import React, { useEffect } from 'react';
 import { X, Users, Settings, Gauge, ShieldCheck, CheckCircle2 } from 'lucide-react';
-
-type Vehicle = {
-  id: string;
-  name: string;
-  type: 'Mobil' | 'Motor';
-  price: number;
-  status: 'Available' | 'Booked';
-  img: string;
-  seats: number;
-  transmission: string;
-};
+// Mengimpor tipe data pusat agar sinkron dengan App.tsx
+import type { Vehicle } from '../types';
 
 interface Props {
   vehicle: Vehicle | null;
@@ -21,7 +12,7 @@ interface Props {
 
 export default function VehicleDetailModal({ vehicle, isOpen, onClose, onBooking }: Props) {
   
-  // Perbaikan 1: Mencegah scroll pada body saat modal terbuka
+  // Mencegah scroll pada background saat modal terbuka
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -34,33 +25,32 @@ export default function VehicleDetailModal({ vehicle, isOpen, onClose, onBooking
   if (!isOpen || !vehicle) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 overflow-y-auto">
-      {/* Backdrop dengan transisi halus */}
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6">
+      {/* Backdrop dengan Blur */}
       <div 
-        className="fixed inset-0 bg-black/90 backdrop-blur-md transition-opacity"
+        className="fixed inset-0 bg-black/90 backdrop-blur-md transition-opacity duration-300"
         onClick={onClose}
       ></div>
 
-      {/* Modal Content */}
-      <div className="relative bg-zinc-950 w-full max-w-5xl rounded-[2rem] md:rounded-[3rem] border border-white/10 overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-300 my-auto">
+      {/* Container Modal */}
+      <div className="relative bg-zinc-950 w-full max-w-5xl rounded-[2rem] md:rounded-[3rem] border border-white/10 overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-500 my-auto max-h-[90vh] overflow-y-auto">
         
         {/* Close Button */}
         <button 
           onClick={onClose}
-          className="absolute top-4 right-4 md:top-6 md:right-6 z-20 p-3 bg-black/50 hover:bg-white/10 rounded-full border border-white/10 transition-all text-white"
+          className="absolute top-4 right-4 md:top-6 md:right-6 z-50 p-3 bg-black/50 hover:bg-white/10 rounded-full border border-white/10 transition-all text-white active:scale-90"
         >
           <X size={20} />
         </button>
 
         <div className="grid lg:grid-cols-2">
-          {/* KIRI: Visual Kendaraan */}
-          <div className="relative h-[250px] sm:h-[350px] lg:h-full group overflow-hidden border-b lg:border-b-0 lg:border-r border-white/5">
+          {/* BAGIAN KIRI: Visual Kendaraan */}
+          <div className="relative h-[250px] sm:h-[350px] lg:h-auto group overflow-hidden border-b lg:border-b-0 lg:border-r border-white/5">
             <img 
               src={vehicle.img} 
               alt={vehicle.name}
               className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
             />
-            {/* Overlay Gradient yang lebih halus */}
             <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-transparent"></div>
             
             <div className="absolute bottom-6 left-6 md:bottom-8 md:left-8">
@@ -70,7 +60,7 @@ export default function VehicleDetailModal({ vehicle, isOpen, onClose, onBooking
             </div>
           </div>
 
-          {/* KANAN: Informasi & Aksi */}
+          {/* BAGIAN KANAN: Detail & Harga */}
           <div className="p-6 md:p-10 lg:p-12 flex flex-col justify-between bg-zinc-950">
             <div>
               <div className="mb-8">
@@ -82,40 +72,42 @@ export default function VehicleDetailModal({ vehicle, isOpen, onClose, onBooking
                 </h2>
               </div>
 
-              {/* Spek Grid - Perbaikan Grid Gap */}
+              {/* Grid Spesifikasi */}
               <div className="grid grid-cols-2 gap-3 md:gap-4 mb-8">
-                <SpecItem icon={<Users size={18}/>} label="Capacity" value={`${vehicle.seats} Seats`} />
+                <SpecItem icon={<Users size={18}/>} label="Capacity" value={`${vehicle.seats} Kursi`} />
                 <SpecItem icon={<Settings size={18}/>} label="Transmisi" value={vehicle.transmission} />
-                <SpecItem icon={<Gauge size={18}/>} label="Engine" value="High Perf." />
-                <SpecItem icon={<ShieldCheck size={18}/>} label="Insurance" value="Full Covered" />
+                <SpecItem icon={<Gauge size={18}/>} label="Performance" value="High Output" />
+                <SpecItem icon={<ShieldCheck size={18}/>} label="Insurance" value="All Risk" />
               </div>
 
-              {/* Deskripsi/Service - Menggunakan Icon yang konsisten */}
+              {/* Inclusions List */}
               <div className="mb-8">
                 <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 mb-4 flex items-center gap-2">
                   <span className="w-8 h-[1px] bg-blue-600"></span> 
-                  Inclusions
+                  Layanan Termasuk
                 </h5>
                 <ul className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-4">
-                  <InclusionItem text="Professional Driver" />
-                  <InclusionItem text="Sanitized Unit" />
-                  <InclusionItem text="24/7 Assistance" />
-                  <InclusionItem text="Mineral Water" />
+                  <InclusionItem text="Unit Sangat Bersih" />
+                  <InclusionItem text="Full Tank BBM" />
+                  <InclusionItem text="Bantuan 24/7" />
+                  <InclusionItem text="Asuransi Perjalanan" />
                 </ul>
               </div>
             </div>
 
-            {/* Price & Action */}
+            {/* Footer: Harga & Button Aksi */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-8 border-t border-white/5">
               <div className="text-center sm:text-left">
-                <p className="text-[10px] text-zinc-500 uppercase font-black tracking-widest mb-1">Price per day</p>
+                <p className="text-[10px] text-zinc-500 uppercase font-black tracking-widest mb-1">Harga Sewa</p>
                 <p className="text-3xl font-black italic tracking-tighter text-white">
                   Rp {vehicle.price.toLocaleString('id-ID')}
+                  <span className="text-xs font-normal text-zinc-500 italic ml-1">/hari</span>
                 </p>
               </div>
               
               <button 
-                disabled={vehicle.status === 'Booked'}
+                // Menonaktifkan tombol jika status bukan Available
+                disabled={vehicle.status !== 'Available'}
                 onClick={() => {
                   onBooking(vehicle);
                   onClose();
@@ -126,7 +118,7 @@ export default function VehicleDetailModal({ vehicle, isOpen, onClose, onBooking
                     : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'}
                 `}
               >
-                {vehicle.status === 'Available' ? 'Book This Unit' : 'Fully Booked'}
+                {vehicle.status === 'Available' ? 'Booking Sekarang' : 'Unit Tidak Tersedia'}
               </button>
             </div>
           </div>
@@ -136,7 +128,7 @@ export default function VehicleDetailModal({ vehicle, isOpen, onClose, onBooking
   );
 }
 
-// Komponen Kecil untuk Scannability Kode
+// Sub-komponen untuk Spesifikasi
 function SpecItem({ icon, label, value }: { icon: React.ReactNode, label: string, value: string }) {
   return (
     <div className="flex items-center gap-3 p-3 md:p-4 rounded-2xl bg-white/[0.03] border border-white/5 group hover:border-blue-500/30 transition-colors">
@@ -149,6 +141,7 @@ function SpecItem({ icon, label, value }: { icon: React.ReactNode, label: string
   );
 }
 
+// Sub-komponen untuk Daftar Inklusi
 function InclusionItem({ text }: { text: string }) {
   return (
     <li className="flex items-center gap-2 text-[11px] text-zinc-400 font-medium">

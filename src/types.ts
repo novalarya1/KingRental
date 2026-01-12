@@ -5,6 +5,8 @@ export type Vehicle = {
   price: number;
   status: 'Available' | 'On Rent' | 'Maintenance';
   img: string;
+  seats: number;
+  transmission: string;
 };
 
 export type Booking = {
@@ -13,4 +15,6 @@ export type Booking = {
   vehicleName: string;
   status: 'Pending' | 'Approved' | 'Paid' | 'On Rent' | 'Finished';
   totalPrice: number;
+  startDate?: string; 
+  endDate?: string;
 };
