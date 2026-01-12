@@ -33,7 +33,7 @@ export default function Contact() {
             <div className="w-14 h-14 bg-purple-600/10 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
               <Mail className="text-purple-500" size={28} />
             </div>
-            <h3 className="text-xl font-bold mb-2 text-white">Email Inquiry</h3>
+            <h3 className="text-xl font-bold mb-2 text-white">Email</h3>
             <p className="text-zinc-500 text-sm mb-6">Corporate partnerships or long-term rental agreements.</p>
             <a href="mailto:kingrental@gmail.com" className="text-purple-500 font-black text-sm tracking-widest uppercase hover:underline">
               kingrental@gmail.com

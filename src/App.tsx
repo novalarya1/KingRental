@@ -14,6 +14,10 @@ import FloatingContact from './components/FloatingContact';
 import VehicleDetailModal from './components/VehicleDetailModal';
 import BookingFormModal from './components/BookingFormModal';
 
+// --- PERBAIKAN IMPORT ADMIN COMPONENTS ---
+import AdminDashboard from './components/admin/Dashboard';
+import VehicleManager from './components/admin/VehicleManager';
+
 // Styles
 import './App.css';
 
@@ -34,9 +38,12 @@ export default function App() {
   
   // --- 2. Navigation & UI State ---
   const [view, setView] = useState<'home' | 'history' | 'admin'>('home');
-  const [filter, setFilter] = useState('All'); // Changed 'Semua' to 'All'
+  const [filter, setFilter] = useState('All'); 
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // --- TAMBAHAN STATE UNTUK SUB-VIEW ADMIN ---
+  const [adminSubView, setAdminSubView] = useState<'stats' | 'fleet'>('stats');
 
   // --- MODAL & SELECTION STATE ---
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
@@ -95,7 +102,6 @@ export default function App() {
   };
 
   // --- 6. Booking Flow Handlers ---
-
   const handleOpenDetail = (vehicle: Vehicle) => {
     setSelectedVehicle(vehicle);
     setIsDetailOpen(true);
@@ -166,14 +172,14 @@ export default function App() {
             
             <section id="catalog" className="max-w-7xl mx-auto py-24 px-6">
               <div className="flex items-center gap-6 mb-16">
-                <div className="h-px flex-1 bg-linear-to-r from-transparent via-white/20 to-transparent"></div>
+                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
                 <div className="text-center">
-                  <h2 className="text-4xl md:text-5xl font-black italic tracking-tighter uppercase text-center bg-linear-to-b from-white to-zinc-500 bg-clip-text text-transparent">
+                  <h2 className="text-4xl md:text-5xl font-black italic tracking-tighter uppercase text-center bg-gradient-to-b from-white to-zinc-500 bg-clip-text text-transparent">
                     Our Fleet
                   </h2>
                   <p className="text-[10px] text-blue-500 font-bold tracking-[0.5em] uppercase mt-2">Elite Selection</p>
                 </div>
-                <div className="h-px flex-1 bg-linear-to-r from-transparent via-white/20 to-transparent"></div>
+                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
               </div>
 
               {isLoading ? (
@@ -245,37 +251,71 @@ export default function App() {
 
         {view === 'admin' && user?.role === 'Admin' && (
           <div className="pt-40 pb-20 px-6 max-w-6xl mx-auto min-h-screen animate-in fade-in duration-700">
-            <h2 className="text-4xl font-black italic tracking-tighter uppercase mb-12">Admin Center</h2>
-            <div className="bg-zinc-900/50 backdrop-blur-2xl border border-white/5 rounded-[3rem] overflow-hidden shadow-2xl">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead className="bg-white/2 text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-black">
-                    <tr>
-                      <th className="p-10">Transaction</th>
-                      <th>Unit Name</th>
-                      <th>Status</th>
-                      <th className="p-10 text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="text-sm border-t border-white/5">
-                    {bookings.map(b => (
-                      <tr key={b.id} className="border-b border-white/2 hover:bg-white/1">
-                        <td className="p-10 font-mono text-xs text-blue-500/50">{b.id}</td>
-                        <td className="font-black uppercase italic tracking-tight text-lg">{b.vehicleName}</td>
-                        <td>
-                          <span className={`text-[10px] px-4 py-1.5 rounded-full font-black uppercase ${b.status === 'Pending' ? 'bg-amber-500/10 text-amber-500' : 'bg-blue-500/10 text-blue-500'}`}>
-                            {b.status}
-                          </span>
-                        </td>
-                        <td className="p-10 text-right">
-                          <button onClick={() => updateStatus(b.id, 'Approved')} className="bg-white text-black px-6 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-blue-600 hover:text-white transition-all">Verify</button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+            
+            {/* --- ADMIN NAVIGATION TOGGLE --- */}
+            <div className="flex gap-4 mb-8">
+              <button 
+                onClick={() => setAdminSubView('stats')}
+                className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${adminSubView === 'stats' ? 'bg-blue-600 text-white' : 'bg-zinc-900 text-zinc-500 hover:bg-zinc-800'}`}
+              >
+                Dashboard Stats
+              </button>
+              <button 
+                onClick={() => setAdminSubView('fleet')}
+                className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${adminSubView === 'fleet' ? 'bg-blue-600 text-white' : 'bg-zinc-900 text-zinc-500 hover:bg-zinc-800'}`}
+              >
+                Manage Fleet
+              </button>
             </div>
+
+            {/* --- KONTEN DINAMIS ADMIN --- */}
+            {adminSubView === 'stats' ? (
+              <>
+                <AdminDashboard />
+                <div className="mt-12">
+                  <h3 className="text-xl font-black italic tracking-tighter uppercase mb-6">Reservation Logs</h3>
+                  <div className="bg-zinc-900/50 backdrop-blur-2xl border border-white/5 rounded-[3rem] overflow-hidden shadow-2xl">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left">
+                        <thead className="bg-white/5 text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-black">
+                          <tr>
+                            <th className="p-10">Transaction</th>
+                            <th>Unit Name</th>
+                            <th>Status</th>
+                            <th className="p-10 text-right">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="text-sm border-t border-white/5">
+                          {bookings.map(b => (
+                            <tr key={b.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                              <td className="p-10 font-mono text-xs text-blue-500/50">{b.id}</td>
+                              <td className="font-black uppercase italic tracking-tight text-lg">{b.vehicleName}</td>
+                              <td>
+                                <span className={`text-[10px] px-4 py-1.5 rounded-full font-black uppercase ${b.status === 'Pending' ? 'bg-amber-500/10 text-amber-500' : 'bg-blue-500/10 text-blue-500'}`}>
+                                  {b.status}
+                                </span>
+                              </td>
+                              <td className="p-10 text-right">
+                                {b.status === 'Pending' && (
+                                  <button onClick={() => updateStatus(b.id, 'Approved')} className="bg-white text-black px-6 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-blue-600 hover:text-white transition-all">Verify</button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                          {bookings.length === 0 && (
+                            <tr>
+                                <td colSpan={4} className="p-10 text-center text-zinc-500 italic uppercase text-[10px] tracking-widest">No transactions yet</td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <VehicleManager />
+            )}
           </div>
         )}
       </main>
