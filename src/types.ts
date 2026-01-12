@@ -1,7 +1,7 @@
 export type Vehicle = {
   id: string;
   name: string;
-  type: 'Mobil' | 'Motor';
+  type: 'Car' | 'Motorcycle';
   price: number;
   status: 'Available' | 'On Rent' | 'Maintenance';
   img: string;

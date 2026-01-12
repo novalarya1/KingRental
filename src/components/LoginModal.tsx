@@ -15,13 +15,13 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onError, onSwit
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center px-6">
-      {/* Overlay Blur */}
+      {/* Blur Overlay */}
       <div 
         className="absolute inset-0 bg-black/90 backdrop-blur-md animate-in fade-in duration-300" 
         onClick={onClose}
       ></div>
 
-      {/* Card Login */}
+      {/* Login Card */}
       <div className="relative w-full max-w-md bg-zinc-900 border border-white/10 rounded-[2.5rem] p-10 shadow-2xl animate-in zoom-in-95 duration-300">
         <button 
           onClick={onClose}
@@ -40,7 +40,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onError, onSwit
           </p>
         </div>
 
-        {/* Form Login Manual */}
+        {/* Manual Login Form */}
         <form className="space-y-4 mb-8" onSubmit={(e) => e.preventDefault()}>
           <div className="relative group">
             <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-blue-500 transition-colors" size={16} />
@@ -82,11 +82,11 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onError, onSwit
               onSuccess={onSuccess}
               onError={onError}
               useOneTap
-              theme="filled_blue" // Menggunakan warna biru agar senada dengan tombol Sign In
+              theme="filled_blue" // Use blue theme to match the Sign In button
               shape="pill"
               size="large"
               text="continue_with"
-              width="320" // Memberikan width spesifik agar tidak terpotong di mobile
+              width="320" // Specific width to prevent clipping on mobile
             />
           </div>
         </div>

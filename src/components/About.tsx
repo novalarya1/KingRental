@@ -17,7 +17,7 @@ export default function About() {
       <div className="max-w-7xl mx-auto">
         <div className="grid lg:grid-cols-2 gap-20 items-center">
           
-          {/* KIRI: Visual/Image */}
+          {/* LEFT: Visual/Image */}
           <div className="relative group">
             <div className="absolute -inset-4 bg-gradient-to-tr from-blue-600 to-purple-600 rounded-[3rem] opacity-20 blur-2xl group-hover:opacity-40 transition-all duration-700"></div>
             <div className="relative rounded-[2.5rem] overflow-hidden border border-white/10 aspect-[4/5] lg:aspect-square shadow-2xl">
@@ -32,13 +32,13 @@ export default function About() {
               <div className="absolute bottom-10 left-10 right-10 p-8 bg-black/40 backdrop-blur-xl border border-white/10 rounded-[2rem]">
                 <p className="text-blue-500 font-black italic tracking-widest text-xs uppercase mb-2">The Standard</p>
                 <h3 className="text-xl font-black text-white leading-tight uppercase tracking-tighter">
-                  "Bukan sekadar perjalanan, tapi sebuah pernyataan."
+                  "Not just a journey, but a statement."
                 </h3>
               </div>
             </div>
           </div>
 
-          {/* KANAN: Content */}
+          {/* RIGHT: Content */}
           <div className="space-y-10">
             <div className="space-y-4">
               <h4 className="text-blue-500 font-black tracking-[0.5em] text-[10px] uppercase">About The King</h4>
@@ -50,10 +50,10 @@ export default function About() {
             </div>
 
             <p className="text-zinc-400 text-lg leading-relaxed font-medium">
-              King Rental hadir untuk menjawab kebutuhan eksklusif Anda di Bali. 
-              Sejak 2016, kami telah melayani ribuan klien VIP, wisatawan, dan profesional 
-              dengan standar pelayanan bintang lima. Kami percaya bahwa setiap detik di jalan 
-              harus dinikmati dengan kenyamanan maksimal dan rasa bangga.
+              King Rental exists to serve your most exclusive needs in Bali. 
+              Since 2016, we have catered to thousands of VIP clients, travelers, and 
+              professionals with a five-star service standard. We believe that every second 
+              on the road should be savored with absolute comfort and a sense of pride.
             </p>
 
             {/* Stats Grid */}

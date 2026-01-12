@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { X, Users, Settings, Gauge, ShieldCheck, CheckCircle2 } from 'lucide-react';
-// Mengimpor tipe data pusat agar sinkron dengan App.tsx
+// Importing central data types to stay in sync with App.tsx
 import type { Vehicle } from '../types';
 
 interface Props {
@@ -12,7 +12,7 @@ interface Props {
 
 export default function VehicleDetailModal({ vehicle, isOpen, onClose, onBooking }: Props) {
   
-  // Mencegah scroll pada background saat modal terbuka
+  // Prevent background scroll when modal is open
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -26,13 +26,13 @@ export default function VehicleDetailModal({ vehicle, isOpen, onClose, onBooking
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6">
-      {/* Backdrop dengan Blur */}
+      {/* Backdrop with Blur */}
       <div 
         className="fixed inset-0 bg-black/90 backdrop-blur-md transition-opacity duration-300"
         onClick={onClose}
       ></div>
 
-      {/* Container Modal */}
+      {/* Modal Container */}
       <div className="relative bg-zinc-950 w-full max-w-5xl rounded-[2rem] md:rounded-[3rem] border border-white/10 overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-500 my-auto max-h-[90vh] overflow-y-auto">
         
         {/* Close Button */}
@@ -44,7 +44,7 @@ export default function VehicleDetailModal({ vehicle, isOpen, onClose, onBooking
         </button>
 
         <div className="grid lg:grid-cols-2">
-          {/* BAGIAN KIRI: Visual Kendaraan */}
+          {/* LEFT SIDE: Vehicle Visuals */}
           <div className="relative h-[250px] sm:h-[350px] lg:h-auto group overflow-hidden border-b lg:border-b-0 lg:border-r border-white/5">
             <img 
               src={vehicle.img} 
@@ -60,7 +60,7 @@ export default function VehicleDetailModal({ vehicle, isOpen, onClose, onBooking
             </div>
           </div>
 
-          {/* BAGIAN KANAN: Detail & Harga */}
+          {/* RIGHT SIDE: Details & Pricing */}
           <div className="p-6 md:p-10 lg:p-12 flex flex-col justify-between bg-zinc-950">
             <div>
               <div className="mb-8">
@@ -72,10 +72,10 @@ export default function VehicleDetailModal({ vehicle, isOpen, onClose, onBooking
                 </h2>
               </div>
 
-              {/* Grid Spesifikasi */}
+              {/* Specifications Grid */}
               <div className="grid grid-cols-2 gap-3 md:gap-4 mb-8">
-                <SpecItem icon={<Users size={18}/>} label="Capacity" value={`${vehicle.seats} Kursi`} />
-                <SpecItem icon={<Settings size={18}/>} label="Transmisi" value={vehicle.transmission} />
+                <SpecItem icon={<Users size={18}/>} label="Capacity" value={`${vehicle.seats} Seats`} />
+                <SpecItem icon={<Settings size={18}/>} label="Transmission" value={vehicle.transmission} />
                 <SpecItem icon={<Gauge size={18}/>} label="Performance" value="High Output" />
                 <SpecItem icon={<ShieldCheck size={18}/>} label="Insurance" value="All Risk" />
               </div>
@@ -84,29 +84,29 @@ export default function VehicleDetailModal({ vehicle, isOpen, onClose, onBooking
               <div className="mb-8">
                 <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 mb-4 flex items-center gap-2">
                   <span className="w-8 h-[1px] bg-blue-600"></span> 
-                  Layanan Termasuk
+                  Included Services
                 </h5>
                 <ul className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-4">
-                  <InclusionItem text="Unit Sangat Bersih" />
-                  <InclusionItem text="Full Tank BBM" />
-                  <InclusionItem text="Bantuan 24/7" />
-                  <InclusionItem text="Asuransi Perjalanan" />
+                  <InclusionItem text="Deep Cleaned Unit" />
+                  <InclusionItem text="Full Tank Fuel" />
+                  <InclusionItem text="24/7 Roadside Assistance" />
+                  <InclusionItem text="Travel Insurance" />
                 </ul>
               </div>
             </div>
 
-            {/* Footer: Harga & Button Aksi */}
+            {/* Footer: Price & Action Button */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-8 border-t border-white/5">
               <div className="text-center sm:text-left">
-                <p className="text-[10px] text-zinc-500 uppercase font-black tracking-widest mb-1">Harga Sewa</p>
+                <p className="text-[10px] text-zinc-500 uppercase font-black tracking-widest mb-1">Rental Price</p>
                 <p className="text-3xl font-black italic tracking-tighter text-white">
                   Rp {vehicle.price.toLocaleString('id-ID')}
-                  <span className="text-xs font-normal text-zinc-500 italic ml-1">/hari</span>
+                  <span className="text-xs font-normal text-zinc-500 italic ml-1">/day</span>
                 </p>
               </div>
               
               <button 
-                // Menonaktifkan tombol jika status bukan Available
+                // Disable button if status is not Available
                 disabled={vehicle.status !== 'Available'}
                 onClick={() => {
                   onBooking(vehicle);
@@ -118,7 +118,7 @@ export default function VehicleDetailModal({ vehicle, isOpen, onClose, onBooking
                     : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'}
                 `}
               >
-                {vehicle.status === 'Available' ? 'Booking Sekarang' : 'Unit Tidak Tersedia'}
+                {vehicle.status === 'Available' ? 'Book Now' : 'Unit Unavailable'}
               </button>
             </div>
           </div>
@@ -128,7 +128,7 @@ export default function VehicleDetailModal({ vehicle, isOpen, onClose, onBooking
   );
 }
 
-// Sub-komponen untuk Spesifikasi
+// Sub-component for Specifications
 function SpecItem({ icon, label, value }: { icon: React.ReactNode, label: string, value: string }) {
   return (
     <div className="flex items-center gap-3 p-3 md:p-4 rounded-2xl bg-white/[0.03] border border-white/5 group hover:border-blue-500/30 transition-colors">
@@ -141,7 +141,7 @@ function SpecItem({ icon, label, value }: { icon: React.ReactNode, label: string
   );
 }
 
-// Sub-komponen untuk Daftar Inklusi
+// Sub-component for Inclusions List
 function InclusionItem({ text }: { text: string }) {
   return (
     <li className="flex items-center gap-2 text-[11px] text-zinc-400 font-medium">

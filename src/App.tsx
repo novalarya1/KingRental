@@ -17,7 +17,7 @@ import BookingFormModal from './components/BookingFormModal';
 // Styles
 import './App.css';
 
-// Types - Pastikan file src/types.ts sudah diperbarui
+// Types
 import type { Vehicle, Booking } from './types';
 
 export default function App() {
@@ -34,7 +34,7 @@ export default function App() {
   
   // --- 2. Navigation & UI State ---
   const [view, setView] = useState<'home' | 'history' | 'admin'>('home');
-  const [filter, setFilter] = useState('Semua');
+  const [filter, setFilter] = useState('All'); // Changed 'Semua' to 'All'
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -43,12 +43,12 @@ export default function App() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isBookingFormOpen, setIsBookingFormOpen] = useState(false);
 
-  // --- 3. Mock Data (Status 'Booked' diubah ke 'On Rent' agar valid sesuai types.ts) ---
+  // --- 3. Mock Data ---
   const [vehicles] = useState<Vehicle[]>([
-    { id: '1', name: 'Toyota Alphard', type: 'Mobil', price: 2500000, status: 'Available', seats: 7, transmission: 'AT', img: 'https://images.unsplash.com/photo-1616422285623-13ff0162193c?q=80&w=600' },
-    { id: '2', name: 'Porsche 911', type: 'Mobil', price: 5000000, status: 'Available', seats: 2, transmission: 'AT', img: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=600' },
-    { id: '3', name: 'Vespa Primavera', type: 'Motor', price: 250000, status: 'Available', seats: 2, transmission: 'AT', img: 'https://www.thedrive.com/wp-content/uploads/content/archive-images/vespareview_inline4.jpg?strip=all&quality=85' },
-    { id: '4', name: 'Kawasaki ZX25R', type: 'Motor', price: 600000, status: 'On Rent', seats: 2, transmission: 'MT', img: 'https://img.autofun.co.id/file/4a1fba86ab0c4118a6f240b4ba6cb3f7.jpg' },
+    { id: '1', name: 'Toyota Alphard', type: 'Car', price: 2500000, status: 'Available', seats: 7, transmission: 'AT', img: 'https://images.unsplash.com/photo-1616422285623-13ff0162193c?q=80&w=600' },
+    { id: '2', name: 'Porsche 911', type: 'Car', price: 5000000, status: 'Available', seats: 2, transmission: 'AT', img: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=600' },
+    { id: '3', name: 'Vespa Primavera', type: 'Motorcycle', price: 250000, status: 'Available', seats: 2, transmission: 'AT', img: 'https://www.thedrive.com/wp-content/uploads/content/archive-images/vespareview_inline4.jpg?strip=all&quality=85' },
+    { id: '4', name: 'Kawasaki ZX25R', type: 'Motorcycle', price: 600000, status: 'On Rent', seats: 2, transmission: 'MT', img: 'https://img.autofun.co.id/file/4a1fba86ab0c4118a6f240b4ba6cb3f7.jpg' },
   ]);
   
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -56,7 +56,7 @@ export default function App() {
   // --- 4. Logic Search & Filter ---
   const filteredVehicles = useMemo(() => {
     return vehicles.filter(v => {
-      const matchesCategory = filter === 'Semua' || v.type === filter;
+      const matchesCategory = filter === 'All' || v.type === filter;
       const matchesSearch = v.name.toLowerCase().includes(searchQuery.toLowerCase().trim());
       return matchesCategory && matchesSearch;
     });
@@ -83,7 +83,7 @@ export default function App() {
       setIsLoginOpen(false);
       setIsRegisterOpen(false);
     } catch (error) {
-      console.error("Gagal decode token:", error);
+      console.error("Token decoding failed:", error);
     }
   };
 
@@ -119,8 +119,8 @@ export default function App() {
       vehicleName: vehicle.name,
       status: 'Pending',
       totalPrice: totalPrice,
-      startDate: startDate, // Sekarang variabel dibaca (menghapus warning 6133)
-      endDate: endDate,     // Sekarang variabel dibaca
+      startDate: startDate,
+      endDate: endDate,
     };
     
     setBookings([newBooking, ...bookings]);
@@ -191,7 +191,7 @@ export default function App() {
               ) : (
                 <div className="text-center py-32 bg-zinc-900/10 rounded-[4rem] border border-dashed border-white/5 backdrop-blur-sm">
                   <p className="text-zinc-500 font-bold uppercase tracking-widest text-sm italic">
-                    Unit "{searchQuery}" tidak tersedia saat ini
+                    Unit "{searchQuery}" is currently unavailable
                   </p>
                 </div>
               )}
@@ -210,7 +210,7 @@ export default function App() {
             
             {bookings.length === 0 ? (
               <div className="text-center py-24 border border-white/5 rounded-[3rem] bg-zinc-900/20 backdrop-blur-sm">
-                <p className="text-zinc-600 uppercase tracking-[0.3em] text-[11px] font-bold">Riwayat pesanan kosong</p>
+                <p className="text-zinc-600 uppercase tracking-[0.3em] text-[11px] font-bold">Booking history is empty</p>
               </div>
             ) : (
               <div className="grid gap-6">
@@ -232,7 +232,7 @@ export default function App() {
                           onClick={() => updateStatus(b.id, 'Paid')} 
                           className="bg-blue-600 px-8 py-3 rounded-2xl text-[11px] font-black uppercase tracking-tighter hover:bg-blue-500 transition-all shadow-lg shadow-blue-600/20"
                         >
-                          Lanjutkan Pembayaran
+                          Proceed to Payment
                         </button>
                       )}
                     </div>

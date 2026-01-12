@@ -14,7 +14,7 @@ export default function BookingFormModal({ isOpen, vehicle, onClose, onConfirm }
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [startTime, setStartTime] = useState('09:00');
-  const [endTime, setEndTime] = useState('21:00'); // Default 12 jam agar terlihat perbedaannya
+  const [endTime, setEndTime] = useState('21:00'); // Default 12 hours for visible difference
   
   const [duration, setDuration] = useState(0);
   const [totalPrice, setTotalPrice] = useState(0);
@@ -40,13 +40,13 @@ export default function BookingFormModal({ isOpen, vehicle, onClose, onConfirm }
       const totalEndMinutes = endH * 60 + endM;
       let diffMinutes = totalEndMinutes - totalStartMinutes;
 
-      // Logika jika waktu selesai adalah hari berikutnya (opsional, saat ini diasumsi hari yang sama)
+      // Logic if return time is same day (currently assumes same day)
       if (diffMinutes < 0) diffMinutes = 0; 
 
       const activeHours = diffMinutes / 60;
-      setDuration(Number(activeHours.toFixed(1))); // Pembulatan 1 angka di belakang koma
+      setDuration(Number(activeHours.toFixed(1))); // Round to 1 decimal place
 
-      // PERBAIKAN HITUNGAN: Harga per jam = Harga Harian / 24
+      // CALCULATION FIX: Hourly Rate = Daily Price / 24
       const hourlyRate = vehicle.price / 24;
       setTotalPrice(Math.round(activeHours * hourlyRate));
     }
@@ -57,7 +57,7 @@ export default function BookingFormModal({ isOpen, vehicle, onClose, onConfirm }
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (duration <= 0) {
-      alert("Durasi pengembalian harus setelah waktu mulai.");
+      alert("Return duration must be after the start time.");
       return;
     }
     const finalStart = bookingType === 'hourly' ? `${startDate} T${startTime}` : startDate;
@@ -90,21 +90,21 @@ export default function BookingFormModal({ isOpen, vehicle, onClose, onConfirm }
               onClick={() => setBookingType('daily')}
               className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${bookingType === 'daily' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-zinc-500 hover:text-white'}`}
             >
-              Harian
+              Daily
             </button>
             <button 
               type="button"
               onClick={() => setBookingType('hourly')}
               className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${bookingType === 'hourly' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-zinc-500 hover:text-white'}`}
             >
-              Per Jam
+              Hourly
             </button>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <label className="text-[10px] text-zinc-500 uppercase font-black ml-4 tracking-widest block">
-                {bookingType === 'hourly' ? 'Tanggal Sewa' : 'Pick-up Date'}
+                {bookingType === 'hourly' ? 'Rental Date' : 'Pick-up Date'}
               </label>
               <div className="relative group">
                 <Calendar className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-blue-600 transition-colors pointer-events-none" size={18} />
@@ -137,7 +137,7 @@ export default function BookingFormModal({ isOpen, vehicle, onClose, onConfirm }
             ) : (
               <div className="grid grid-cols-2 gap-4 animate-in slide-in-from-top-2 duration-300">
                 <div className="space-y-2">
-                  <label className="text-[10px] text-zinc-500 uppercase font-black ml-4 tracking-widest block">Jam Mulai</label>
+                  <label className="text-[10px] text-zinc-500 uppercase font-black ml-4 tracking-widest block">Start Time</label>
                   <input 
                     type="time" 
                     value={startTime}
@@ -147,7 +147,7 @@ export default function BookingFormModal({ isOpen, vehicle, onClose, onConfirm }
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] text-zinc-500 uppercase font-black ml-4 tracking-widest block">Jam Selesai</label>
+                  <label className="text-[10px] text-zinc-500 uppercase font-black ml-4 tracking-widest block">End Time</label>
                   <input 
                     type="time" 
                     value={endTime}
@@ -163,18 +163,21 @@ export default function BookingFormModal({ isOpen, vehicle, onClose, onConfirm }
               <div className="flex justify-between items-center mb-4">
                 <div className="flex items-center gap-2 text-zinc-400 text-xs">
                   <Timer size={14} className="text-blue-500" />
-                  <span>Durasi Terhitung</span>
+                  <span>Calculated Duration</span>
                 </div>
                 <span className="font-black italic text-white">
-                  {duration} {bookingType === 'daily' ? 'Hari' : 'Jam'}
+                  {duration} {bookingType === 'daily' ? (duration === 1 ? 'Day' : 'Days') : (duration === 1 ? 'Hour' : 'Hours')}
                 </span>
               </div>
               <div className="h-[1px] bg-white/5 mb-4"></div>
               <div className="flex justify-between items-end">
-                <p className="text-[10px] text-zinc-500 uppercase font-black tracking-widest">Total Bayar</p>
-                <p className="text-3xl font-black italic tracking-tighter text-blue-500">
-                  Rp {totalPrice.toLocaleString('id-ID')}
-                </p>
+                <p className="text-[10px] text-zinc-500 uppercase font-black tracking-widest">Total Price</p>
+                <div className="text-right">
+                    <p className="text-3xl font-black italic tracking-tighter text-blue-500">
+                        Rp {totalPrice.toLocaleString('id-ID')}
+                    </p>
+                    <p className="text-[8px] text-zinc-600 font-bold uppercase mt-1 tracking-tighter">Tax & Service Included</p>
+                </div>
               </div>
             </div>
 
@@ -184,7 +187,7 @@ export default function BookingFormModal({ isOpen, vehicle, onClose, onConfirm }
               className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-white font-black py-5 rounded-[2rem] flex items-center justify-center gap-3 transition-all shadow-xl shadow-blue-600/20 uppercase italic tracking-widest text-xs"
             >
               <CreditCard size={18} />
-              Konfirmasi Reservasi
+              Confirm Reservation
             </button>
           </form>
         </div>

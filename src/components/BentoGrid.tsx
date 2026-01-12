@@ -24,7 +24,6 @@ export default function BentoGrid({ vehicles, onBooking }: BentoGridProps) {
                 ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
                 : 'bg-red-500/10 text-red-500 border-red-500/20'
             }`}>
-              {/* Teks diganti menjadi On Rent sesuai permintaan */}
               {car.status} 
             </span>
           </div>
@@ -55,27 +54,27 @@ export default function BentoGrid({ vehicles, onBooking }: BentoGridProps) {
                 </h3>
               </div>
               <div className="text-right">
-                <p className="text-zinc-500 text-[10px] uppercase font-bold">Mulai Dari</p>
+                <p className="text-zinc-500 text-[10px] uppercase font-bold">Starts From</p>
                 <p className="text-xl font-black text-white">
                   Rp {car.price.toLocaleString('id-ID')}
-                  <span className="text-zinc-500 text-xs font-normal">/hari</span>
+                  <span className="text-zinc-500 text-xs font-normal">/day</span>
                 </p>
               </div>
             </div>
 
-            {/* Spesifikasi */}
+            {/* Specifications */}
             <div className="grid grid-cols-3 gap-2 py-6 border-y border-zinc-800/50">
               <div className="flex flex-col items-center gap-2">
                 <Users size={16} className="text-zinc-500" />
-                <span className="text-[10px] font-bold text-zinc-400">{car.seats} Kursi</span>
+                <span className="text-[10px] font-bold text-zinc-400 uppercase">{car.seats} Seats</span>
               </div>
               <div className="flex flex-col items-center gap-2 border-x border-zinc-800/50">
                 <Gauge size={16} className="text-zinc-500" />
-                <span className="text-[10px] font-bold text-zinc-400">{car.transmission}</span>
+                <span className="text-[10px] font-bold text-zinc-400 uppercase">{car.transmission}</span>
               </div>
               <div className="flex flex-col items-center gap-2">
                 <ShieldCheck size={16} className="text-zinc-500" />
-                <span className="text-[10px] font-bold text-zinc-400">Asuransi</span>
+                <span className="text-[10px] font-bold text-zinc-400 uppercase">Insured</span>
               </div>
             </div>
 
@@ -83,13 +82,13 @@ export default function BentoGrid({ vehicles, onBooking }: BentoGridProps) {
             <button 
               onClick={() => onBooking(car)}
               disabled={car.status !== 'Available'}
-              className={`w-full mt-8 py-4 rounded-2xl font-black text-sm transition-all duration-300 transform active:scale-95 ${
+              className={`w-full mt-8 py-4 rounded-2xl font-black text-sm transition-all duration-300 transform active:scale-95 uppercase italic tracking-widest ${
                 car.status === 'Available'
                 ? 'bg-white text-black hover:bg-blue-600 hover:text-white shadow-xl shadow-white/5'
                 : 'bg-zinc-800 text-zinc-600 cursor-not-allowed'
               }`}
             >
-              {car.status === 'Available' ? 'SEWA SEKARANG' : 'TIDAK TERSEDIA'}
+              {car.status === 'Available' ? 'Rent Now' : 'Not Available'}
             </button>
           </div>
         </div>

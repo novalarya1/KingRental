@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, LogOut, LayoutDashboard, History, Menu, X, Settings } from 'lucide-react';
+import { User, LogOut, LayoutDashboard, History, Menu, X } from 'lucide-react';
 
 interface NavbarProps {
   user: { name: string; role: 'User' | 'Admin'; picture?: string } | null;
@@ -27,7 +27,7 @@ export default function Navbar({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Fungsi Logout yang lebih bersih
+  // Clean Logout Handler
   const handleLogout = () => {
     setIsMobileMenuOpen(false);
     onLogout();

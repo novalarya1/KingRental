@@ -12,8 +12,8 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin }: Regi
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Tambahkan logika pendaftaran manual di sini jika diperlukan
-    alert("Fitur pendaftaran manual sedang dikembangkan. Silakan gunakan Google Sign In.");
+    // Manual registration logic can be added here
+    alert("Manual registration is currently under development. Please use Google Sign In.");
   };
 
   return (
@@ -52,7 +52,7 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin }: Regi
             <input 
               type="text" 
               placeholder="FULL NAME"
-              className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-sm font-bold focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none transition-all placeholder:text-zinc-600"
+              className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-sm font-bold focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none transition-all placeholder:text-zinc-600 text-white"
               required
             />
           </div>
@@ -62,7 +62,7 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin }: Regi
             <input 
               type="email" 
               placeholder="EMAIL ADDRESS"
-              className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-sm font-bold focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none transition-all placeholder:text-zinc-600"
+              className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-sm font-bold focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none transition-all placeholder:text-zinc-600 text-white"
               required
             />
           </div>
@@ -72,7 +72,7 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin }: Regi
             <input 
               type="password" 
               placeholder="PASSWORD"
-              className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-sm font-bold focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none transition-all placeholder:text-zinc-600"
+              className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-sm font-bold focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none transition-all placeholder:text-zinc-600 text-white"
               required
             />
           </div>
@@ -92,9 +92,9 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin }: Regi
           <div className="h-[1px] flex-1 bg-white/5"></div>
         </div>
 
-        {/* Google Register (Directly uses same logic as login) */}
+        {/* Google Register */}
         <button 
-          className="w-full bg-zinc-800 border border-white/5 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-zinc-700 transition-all text-sm"
+          className="w-full bg-zinc-800 border border-white/5 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-zinc-700 transition-all text-sm uppercase tracking-widest"
         >
           <Chrome size={18} className="text-blue-500" />
           Google Account
@@ -105,9 +105,9 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin }: Regi
           ALREADY HAVE AN ACCOUNT?{' '}
           <button 
             onClick={onSwitchToLogin}
-            className="text-blue-500 hover:underline ml-1"
+            className="text-blue-500 hover:text-blue-400 hover:underline ml-1 transition-colors uppercase tracking-tighter"
           >
-            LOG IN HERE
+            Log In Here
           </button>
         </p>
       </div>
