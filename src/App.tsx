@@ -90,6 +90,12 @@ export default function App() {
     } catch (e) { console.error(e); }
   };
 
+  // Tambahkan handler error untuk Google Login
+  const handleGoogleError = () => {
+    console.error("Login Failed");
+    alert("Google Login Gagal. Silakan coba lagi.");
+  };
+
   const handleConfirmBooking = (vehicle: Vehicle, start: string, end: string, total: number) => {
     const newBooking: Booking = {
       id: `BK-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -196,7 +202,6 @@ export default function App() {
                         <button onClick={() => updateStatus(b.id, 'Paid')} className="bg-blue-600 px-8 py-3 rounded-2xl text-[11px] font-black uppercase hover:bg-blue-500 transition-all shadow-lg shadow-blue-600/20">Proceed to Payment</button>
                       )}
                       
-                      {/* RETURN BUTTON: Muncul saat waktu habis */}
                       {b.status === 'Completed' && (
                         <button 
                           onClick={() => {
@@ -289,7 +294,16 @@ export default function App() {
         }} 
       />
       <BookingFormModal isOpen={isBookingFormOpen} vehicle={selectedVehicle} onClose={() => setIsBookingFormOpen(false)} onConfirm={handleConfirmBooking} />
-      <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onSuccess={handleGoogleSuccess} onSwitchToRegister={() => { setIsLoginOpen(false); setIsRegisterOpen(true); }} />
+      
+      {/* PERBAIKAN DI SINI: Menambahkan properti onError */}
+      <LoginModal 
+        isOpen={isLoginOpen} 
+        onClose={() => setIsLoginOpen(false)} 
+        onSuccess={handleGoogleSuccess} 
+        onError={handleGoogleError} 
+        onSwitchToRegister={() => { setIsLoginOpen(false); setIsRegisterOpen(true); }} 
+      />
+      
       <RegisterModal isOpen={isRegisterOpen} onClose={() => setIsRegisterOpen(false)} onSwitchToLogin={() => { setIsRegisterOpen(false); setIsLoginOpen(true); }} />
     </div>
   );
