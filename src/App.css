@@ -1,7 +1,14 @@
-/* --- 1. Base Setup --- */
+/* --- 1. Base Setup & Variables --- */
 :root {
   --primary-blue: #2563eb;
+  --primary-blue-glow: rgba(37, 99, 235, 0.15);
   --dark-zinc: #09090b;
+  --card-bg: #18181b;
+  --transition-smooth: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
@@ -9,46 +16,48 @@ body {
   background-color: black;
   color: white;
   overflow-x: hidden;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
-/* --- 2. Branding & Typography (UC-03) --- */
+/* --- 2. Branding & Typography --- */
 h1, h2, h3 {
   text-transform: uppercase;
   letter-spacing: -0.05em;
+  margin: 0;
 }
 
 .font-mono {
   font-family: 'JetBrains Mono', monospace;
 }
 
-/* --- 3. Hero & Background Effects --- */
+/* --- 3. Background Effects --- */
 .hero-glow {
   position: absolute;
   width: 600px;
   height: 600px;
-  background: radial-gradient(circle, rgba(37, 99, 235, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
+  background: radial-gradient(circle, var(--primary-blue-glow) 0%, rgba(0, 0, 0, 0) 70%);
   border-radius: 50%;
   filter: blur(100px);
   z-index: -1;
   pointer-events: none;
 }
 
-/* --- 4. Card & Grid Interactivity (UC-04) --- */
+/* --- 4. Card & Grid Interactivity --- */
 .card-hover-effect {
-  transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+  transition: var(--transition-smooth);
 }
 
 .card-hover-effect:hover {
   transform: translateY(-12px) scale(1.01);
   box-shadow: 0 25px 50px rgba(0, 0, 0, 0.6), 
-              0 0 25px rgba(37, 99, 235, 0.15);
+              0 0 25px var(--primary-blue-glow);
 }
 
 .image-overlay {
   background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.9) 100%);
 }
 
-/* --- 5. Button & UI Animations (UC-05) --- */
+/* --- 5. Button & UI Animations --- */
 .btn-shimmer {
   position: relative;
   overflow: hidden;
@@ -58,7 +67,7 @@ h1, h2, h3 {
   content: "";
   position: absolute;
   top: -50%;
-  left: -50%;
+  left: -150%; /* Diperbaiki agar mulai dari luar kiri */
   width: 200%;
   height: 200%;
   background: linear-gradient(
@@ -73,10 +82,48 @@ h1, h2, h3 {
 
 .btn-shimmer:hover::after {
   left: 100%;
-  top: 100%;
 }
 
-/* --- 6. Floating Action & Contact Animations --- */
+/* --- 6. Leaflet Map Customization (Dark Mode) --- */
+/* Memastikan kontainer peta memiliki tinggi dan z-index yang benar */
+.leaflet-container {
+  z-index: 10 !important; /* Di bawah Navbar tapi di atas elemen lain */
+  background: #000 !important;
+  font-family: inherit;
+}
+
+/* Filter Dark Mode untuk OpenStreetMap */
+.map-tiles {
+  filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+}
+
+/* Styling Popup agar seirama dengan tema kartu */
+.leaflet-popup-content-wrapper {
+  background: var(--card-bg) !important;
+  color: white !important;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px !important;
+  padding: 5px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+.leaflet-popup-tip {
+  background: var(--card-bg) !important;
+}
+
+.leaflet-popup-content {
+  margin: 12px 16px;
+  line-height: 1.4;
+}
+
+/* Tombol Zoom Leaflet Custom */
+.leaflet-bar a {
+  background-color: var(--card-bg) !important;
+  color: white !important;
+  border-color: rgba(255,255,255,0.1) !important;
+}
+
+/* --- 7. Keyframes & Animations --- */
 @keyframes bounce-subtle {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-10px); }
@@ -96,7 +143,6 @@ h1, h2, h3 {
   animation: pulse-glow 2s infinite;
 }
 
-/* --- 7. Page Transitions & Search Effects --- */
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -112,21 +158,20 @@ h1, h2, h3 {
   animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Tailwind-style Utility for non-tailwind components */
-.animate-spin {
-  animation: spin 1s linear infinite;
-}
-
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
 
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
 /* --- 8. Responsive Fixes --- */
 @media (max-width: 768px) {
   h1 {
-    font-size: 3.5rem !important;
-    line-height: 0.9 !important;
+    font-size: 3rem !important;
+    line-height: 1 !important;
   }
   
   .hero-glow {
@@ -134,9 +179,10 @@ h1, h2, h3 {
     height: 300px;
   }
 
-  .fixed.bottom-8 {
-    bottom: 1.5rem;
-    right: 1.5rem;
+  /* Penyesuaian padding untuk layar kecil */
+  .leaflet-container {
+    height: 300px !important;
+    border-radius: 2rem !important;
   }
 }
 

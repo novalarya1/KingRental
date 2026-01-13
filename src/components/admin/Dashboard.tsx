@@ -41,6 +41,22 @@ export default function AdminDashboard() {
     { id: 'BK-005', user: 'Randi G.', unit: 'Kawasaki ZX25R', status: 'Completed', price: 'Rp 600.000', date: '2026-01-09' },
   ]);
 
+  // --- TAMBAHAN KODE: State untuk Review ---
+  const [reviews] = useState([
+    { id: 1, rating: 5 },
+    { id: 2, rating: 5 },
+    { id: 3, rating: 4 },
+  ]);
+
+  // --- TAMBAHAN KODE: Logika Hitung Happy Clients ---
+  // Menghitung transaksi 'Completed' + data review yang masuk
+  const dynamicHappyClients = useMemo(() => {
+    const completedTransactions = allBookings.filter(b => b.status === 'Completed').length;
+    const totalReviews = reviews.length;
+    // Base 1200 adalah angka awal (seperti data statis Anda sebelumnya) ditambah data real
+    return 1200 + completedTransactions + totalReviews;
+  }, [allBookings, reviews]);
+
   // 3. Logic Filter Search
   const filteredBookings = useMemo(() => {
     return allBookings.filter(b => 
@@ -116,7 +132,15 @@ export default function AdminDashboard() {
             <StatCard title="Total Revenue" value="Rp 124.5M" icon={<Wallet className="text-blue-500" size={20} />} trend="+12%" color="bg-blue-500" />
             <StatCard title="Active Rentals" value="18 Units" icon={<Clock className="text-purple-500" size={20} />} trend="+5" color="bg-purple-500" />
             <StatCard title="Total Vehicles" value="42 Units" icon={<Car className="text-emerald-500" size={20} />} trend="Stable" color="bg-emerald-500" />
-            <StatCard title="Happy Clients" value="1.2k+" icon={<Users className="text-amber-500" size={20} />} trend="+84" color="bg-amber-500" />
+            
+            {/* BAGIAN YANG DIGANTI: Menggunakan data dinamis */}
+            <StatCard 
+              title="Happy Clients" 
+              value={`${dynamicHappyClients}+`} 
+              icon={<Users className="text-amber-500" size={20} />} 
+              trend={`+${allBookings.filter(b => b.status === 'Completed').length} new`} 
+              color="bg-amber-500" 
+            />
           </div>
         )}
 

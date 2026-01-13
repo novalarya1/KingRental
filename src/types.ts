@@ -13,8 +13,17 @@ export type Booking = {
   id: string;
   vehicleId: string;
   vehicleName: string;
-  status: 'Pending' | 'Approved' | 'Paid' | 'On Rent' | 'Finished';
+  status: 'Pending' | 'Approved' | 'Paid' | 'Completed' | 'Returned' | 'Success';
   totalPrice: number;
-  startDate?: string; 
-  endDate?: string;
+  startDate: string; // Wajib ada
+  endDate: string;   // Wajib ada
 };
+
+export interface Review {
+  id: string;
+  bookingId: string;
+  userName: string;
+  rating: number; 
+  comment: string;
+  date: string;
+}
