@@ -12,11 +12,13 @@ export type Vehicle = {
 export type Booking = {
   id: string;
   vehicleId: string;
-  vehicleName: string;
+  vehicleName: string; // Backup jika objek vehicle tidak dikirim
   status: 'Pending' | 'Approved' | 'Paid' | 'Completed' | 'Returned' | 'Success';
   totalPrice: number;
-  startDate: string; // Wajib ada
-  endDate: string;   // Wajib ada
+  startDate: string; 
+  endDate: string;
+  // Tambahkan ini: Menampung data kendaraan lengkap dari relasi backend
+  vehicle?: Vehicle; 
 };
 
 export interface Review {

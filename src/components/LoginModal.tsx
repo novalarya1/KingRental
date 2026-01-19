@@ -1,17 +1,57 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { GoogleLogin } from '@react-oauth/google';
-import { X, Mail, Lock, ArrowRight } from 'lucide-react';
+import { X, Mail, Lock, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
+import api from '../api/axios';
 
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (response: any) => void;
+  onManualLogin: (email: string, password: string) => Promise<void>; 
   onSwitchToRegister: () => void;
   onError: () => void;
 }
 
-export default function LoginModal({ isOpen, onClose, onSuccess, onError, onSwitchToRegister }: LoginModalProps) {
+export default function LoginModal({ 
+  isOpen, 
+  onClose, 
+  onSuccess, 
+  onManualLogin, 
+  onError, 
+  onSwitchToRegister 
+}: LoginModalProps) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null); // State untuk pesan error
+
   if (!isOpen) return null;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setErrorMsg(null); // Reset error setiap kali mencoba login
+
+    try {
+      // 1. WAJIB: Minta CSRF Cookie ke Laravel Sanctum
+      await api.get('/sanctum/csrf-cookie');
+
+      // 2. Jalankan fungsi login manual
+      await onManualLogin(email, password);
+      
+      // Jika berhasil, form biasanya ditutup oleh App.tsx, 
+      // tapi kita bersihkan state di sini sebagai cadangan
+      setEmail('');
+      setPassword('');
+    } catch (err: any) {
+      console.error("Login error in modal:", err);
+      // Ambil pesan error dari backend jika ada
+      const message = err.response?.data?.message || "Invalid credentials. Please try again.";
+      setErrorMsg(message.toUpperCase());
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center px-6">
@@ -40,12 +80,24 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onError, onSwit
           </p>
         </div>
 
+        {/* Error Alert - Ditambahkan untuk feedback user */}
+        {errorMsg && (
+          <div className="mb-6 flex items-center gap-3 bg-red-500/10 border border-red-500/20 p-4 rounded-2xl animate-in slide-in-from-top-2">
+            <AlertCircle className="text-red-500" size={16} />
+            <p className="text-red-500 text-[10px] font-bold uppercase tracking-widest">{errorMsg}</p>
+          </div>
+        )}
+
         {/* Manual Login Form */}
-        <form className="space-y-4 mb-8" onSubmit={(e) => e.preventDefault()}>
+        <form className="space-y-4 mb-8" onSubmit={handleSubmit}>
           <div className="relative group">
             <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-blue-500 transition-colors" size={16} />
             <input 
+              required
               type="email" 
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="EMAIL ADDRESS" 
               className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-14 pr-4 text-xs font-bold text-white focus:border-blue-600 focus:bg-white/[0.08] outline-none transition-all placeholder:text-zinc-600"
             />
@@ -54,14 +106,25 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onError, onSwit
           <div className="relative group">
             <Lock className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-blue-500 transition-colors" size={16} />
             <input 
+              required
               type="password" 
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               placeholder="PASSWORD" 
               className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-14 pr-4 text-xs font-bold text-white focus:border-blue-600 focus:bg-white/[0.08] outline-none transition-all placeholder:text-zinc-600"
             />
           </div>
 
-          <button className="w-full bg-blue-600 text-white font-black uppercase py-4 rounded-2xl hover:bg-blue-500 active:scale-[0.98] transition-all text-[11px] tracking-widest flex items-center justify-center gap-2 shadow-xl shadow-blue-600/20">
-            Sign In <ArrowRight size={14} />
+          <button 
+            disabled={isLoading}
+            className="w-full bg-blue-600 text-white font-black uppercase py-4 rounded-2xl hover:bg-blue-500 active:scale-[0.98] transition-all text-[11px] tracking-widest flex items-center justify-center gap-2 shadow-xl shadow-blue-600/20 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isLoading ? (
+              <Loader2 className="animate-spin" size={16} />
+            ) : (
+              <>Sign In <ArrowRight size={14} /></>
+            )}
           </button>
         </form>
 
@@ -75,18 +138,18 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onError, onSwit
           </span>
         </div>
 
-        {/* Google Login - FIXED VERSION */}
+        {/* Google Login */}
         <div className="w-full flex justify-center">
           <div className="w-full max-w-[350px] overflow-hidden rounded-xl flex justify-center translate-x-1">
              <GoogleLogin
-              onSuccess={onSuccess}
-              onError={onError}
-              useOneTap
-              theme="filled_blue" // Use blue theme to match the Sign In button
-              shape="pill"
-              size="large"
-              text="continue_with"
-              width="320" // Specific width to prevent clipping on mobile
+               onSuccess={onSuccess}
+               onError={onError}
+               useOneTap
+               theme="filled_blue"
+               shape="pill"
+               size="large"
+               text="continue_with"
+               width="320"
             />
           </div>
         </div>
@@ -96,6 +159,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onError, onSwit
           <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">
             Don't have an account? 
             <button 
+              type="button"
               onClick={onSwitchToRegister}
               className="ml-2 text-blue-500 hover:text-white transition-colors underline underline-offset-4"
             >
