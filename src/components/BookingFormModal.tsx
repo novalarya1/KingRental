@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, CreditCard, Clock, Timer } from 'lucide-react';
+import { X, Calendar, CreditCard, Clock, Timer, Loader2 } from 'lucide-react';
 import type { Vehicle } from '../types';
 
 interface BookingFormProps {
@@ -14,13 +14,25 @@ export default function BookingFormModal({ isOpen, vehicle, onClose, onConfirm }
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [startTime, setStartTime] = useState('09:00');
-  const [endTime, setEndTime] = useState('21:00'); // Default 12 hours for visible difference
-  
+  const [endTime, setEndTime] = useState('21:00');
   const [duration, setDuration] = useState(0);
   const [totalPrice, setTotalPrice] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
 
+  // Efek untuk menghitung harga otomatis
   useEffect(() => {
-    if (!vehicle || !startDate) return;
+    if (!vehicle || !startDate) {
+      setDuration(0);
+      setTotalPrice(0);
+      return;
+    }
+
+    const rawPrice = (vehicle as any).price_per_day || (vehicle as any).price || 0;
+    let basePrice = typeof rawPrice === 'string' 
+      ? parseFloat(rawPrice.replace(/[^0-9.-]+/g, "")) 
+      : Number(rawPrice);
+    
+    if (basePrice > 0 && basePrice < 10000) basePrice *= 1000;
 
     if (bookingType === 'daily' && endDate) {
       const start = new Date(startDate);
@@ -30,7 +42,7 @@ export default function BookingFormModal({ isOpen, vehicle, onClose, onConfirm }
       
       const activeDays = diffDays > 0 ? diffDays : 0;
       setDuration(activeDays);
-      setTotalPrice(activeDays * vehicle.price);
+      setTotalPrice(activeDays * basePrice);
     } 
     else if (bookingType === 'hourly' && startTime && endTime) {
       const [startH, startM] = startTime.split(':').map(Number);
@@ -40,65 +52,78 @@ export default function BookingFormModal({ isOpen, vehicle, onClose, onConfirm }
       const totalEndMinutes = endH * 60 + endM;
       let diffMinutes = totalEndMinutes - totalStartMinutes;
 
-      // Logic if return time is same day (currently assumes same day)
       if (diffMinutes < 0) diffMinutes = 0; 
 
       const activeHours = diffMinutes / 60;
-      setDuration(Number(activeHours.toFixed(1))); // Round to 1 decimal place
+      setDuration(Number(activeHours.toFixed(1)));
 
-      // CALCULATION FIX: Hourly Rate = Daily Price / 24
-      const hourlyRate = vehicle.price / 24;
+      const hourlyRate = basePrice / 24;
       setTotalPrice(Math.round(activeHours * hourlyRate));
     }
   }, [startDate, endDate, startTime, endTime, bookingType, vehicle]);
 
   if (!isOpen || !vehicle) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (duration <= 0) {
-      alert("Return duration must be after the start time.");
-      return;
+    if (duration <= 0 || isProcessing) return;
+
+    setIsProcessing(true);
+    try {
+      const finalStart = bookingType === 'hourly' ? `${startDate} ${startTime}:00` : `${startDate} 00:00:00`;
+      const finalEnd = bookingType === 'hourly' ? `${startDate} ${endTime}:00` : `${endDate} 23:59:59`;
+      
+      // onConfirm harus async di App.tsx agar await ini berfungsi
+      await onConfirm(vehicle, finalStart, finalEnd, totalPrice);
+    } catch (error) {
+      console.error("Gagal memproses booking:", error);
+    } finally {
+      setIsProcessing(false);
     }
-    const finalStart = bookingType === 'hourly' ? `${startDate} T${startTime}` : startDate;
-    const finalEnd = bookingType === 'hourly' ? `${startDate} T${endTime}` : endDate;
-    
-    onConfirm(vehicle, finalStart, finalEnd, totalPrice);
   };
 
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-300">
-      <div className="bg-zinc-950 border border-white/10 w-full max-w-lg rounded-[3rem] overflow-hidden shadow-2xl">
+      <div className="bg-zinc-950 border border-white/10 w-full max-w-lg rounded-[2.5rem] md:rounded-[3.5rem] overflow-hidden shadow-2xl relative">
+        
+        {/* Overlay Loading saat proses Payment Gateway */}
+        {isProcessing && (
+          <div className="absolute inset-0 z-[120] bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center text-center p-8">
+            <Loader2 size={40} className="text-blue-500 animate-spin mb-4" />
+            <h3 className="text-xl font-black italic uppercase text-white tracking-tighter">Securing Your Ride</h3>
+            <p className="text-zinc-400 text-[10px] font-bold uppercase tracking-widest mt-2">Please wait, connecting to payment gateway...</p>
+          </div>
+        )}
+
         <div className="p-8 md:p-12">
-          
           <div className="flex justify-between items-center mb-8">
             <div>
-              <h2 className="text-3xl font-black italic uppercase tracking-tighter text-white">
-                Reservation
-              </h2>
-              <p className="text-[10px] text-blue-500 font-bold tracking-[0.4em] uppercase mt-1">Select Duration Type</p>
+              <h2 className="text-3xl font-black italic uppercase tracking-tighter text-white">Reservation</h2>
+              <p className="text-[10px] text-blue-500 font-bold tracking-[0.4em] uppercase mt-1">
+                {vehicle.brand} {vehicle.name}
+              </p>
             </div>
-            <button onClick={onClose} className="p-3 hover:bg-white/5 rounded-full border border-white/5 transition-all text-white">
+            <button 
+              onClick={onClose} 
+              disabled={isProcessing}
+              className="p-3 hover:bg-white/10 rounded-full border border-white/10 transition-all text-white active:scale-90 disabled:opacity-20"
+            >
               <X size={20} />
             </button>
           </div>
 
-          {/* TAB SELECTION */}
-          <div className="flex bg-white/5 p-1.5 rounded-2xl mb-8">
-            <button 
-              type="button"
-              onClick={() => setBookingType('daily')}
-              className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${bookingType === 'daily' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-zinc-500 hover:text-white'}`}
-            >
-              Daily
-            </button>
-            <button 
-              type="button"
-              onClick={() => setBookingType('hourly')}
-              className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${bookingType === 'hourly' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-zinc-500 hover:text-white'}`}
-            >
-              Hourly
-            </button>
+          <div className="flex bg-white/5 p-1.5 rounded-2xl mb-8 border border-white/5">
+            {(['daily', 'hourly'] as const).map((type) => (
+              <button 
+                key={type}
+                type="button"
+                disabled={isProcessing}
+                onClick={() => { setBookingType(type); if(type === 'daily') setEndDate(''); }}
+                className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${bookingType === type ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-zinc-500 hover:text-white'}`}
+              >
+                {type}
+              </button>
+            ))}
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -107,13 +132,13 @@ export default function BookingFormModal({ isOpen, vehicle, onClose, onConfirm }
                 {bookingType === 'hourly' ? 'Rental Date' : 'Pick-up Date'}
               </label>
               <div className="relative group">
-                <Calendar className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-blue-600 transition-colors pointer-events-none" size={18} />
+                <Calendar className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-600" size={18} />
                 <input 
                   type="date" 
                   required
+                  disabled={isProcessing}
                   min={new Date().toISOString().split('T')[0]}
-                  onClick={(e) => e.currentTarget.showPicker()}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-14 pr-6 text-sm focus:outline-none focus:border-blue-600/50 transition-all text-white cursor-pointer"
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-14 pr-6 text-sm focus:outline-none focus:border-blue-600/50 transition-all text-white disabled:opacity-50"
                   onChange={(e) => setStartDate(e.target.value)}
                 />
               </div>
@@ -123,13 +148,13 @@ export default function BookingFormModal({ isOpen, vehicle, onClose, onConfirm }
               <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
                 <label className="text-[10px] text-zinc-500 uppercase font-black ml-4 tracking-widest block">Return Date</label>
                 <div className="relative group">
-                  <Calendar className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-blue-600 transition-colors pointer-events-none" size={18} />
+                  <Calendar className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-600" size={18} />
                   <input 
                     type="date" 
                     required
-                    min={startDate}
-                    onClick={(e) => e.currentTarget.showPicker()}
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-14 pr-6 text-sm focus:outline-none focus:border-blue-600/50 transition-all text-white cursor-pointer"
+                    min={startDate || new Date().toISOString().split('T')[0]}
+                    disabled={!startDate || isProcessing}
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-14 pr-6 text-sm focus:outline-none focus:border-blue-600/50 transition-all text-white disabled:opacity-30"
                     onChange={(e) => setEndDate(e.target.value)}
                   />
                 </div>
@@ -141,8 +166,8 @@ export default function BookingFormModal({ isOpen, vehicle, onClose, onConfirm }
                   <input 
                     type="time" 
                     value={startTime}
-                    onClick={(e) => e.currentTarget.showPicker()}
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-sm focus:outline-none focus:border-blue-600/50 transition-all text-white cursor-pointer"
+                    disabled={isProcessing}
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-sm focus:outline-none text-white disabled:opacity-50"
                     onChange={(e) => setStartTime(e.target.value)}
                   />
                 </div>
@@ -151,43 +176,40 @@ export default function BookingFormModal({ isOpen, vehicle, onClose, onConfirm }
                   <input 
                     type="time" 
                     value={endTime}
-                    onClick={(e) => e.currentTarget.showPicker()}
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-sm focus:outline-none focus:border-blue-600/50 transition-all text-white cursor-pointer"
+                    disabled={isProcessing}
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-sm focus:outline-none text-white disabled:opacity-50"
                     onChange={(e) => setEndTime(e.target.value)}
                   />
                 </div>
               </div>
             )}
 
-            <div className="bg-blue-600/5 border border-blue-500/20 p-6 rounded-[2.5rem]">
-              <div className="flex justify-between items-center mb-4">
-                <div className="flex items-center gap-2 text-zinc-400 text-xs">
+            <div className="bg-blue-600/5 border border-blue-500/20 p-6 rounded-[2.5rem] relative overflow-hidden transition-all duration-500">
+              <div className="flex justify-between items-center mb-4 relative z-10">
+                <div className="flex items-center gap-2 text-zinc-400 text-[10px] uppercase font-bold tracking-widest">
                   <Timer size={14} className="text-blue-500" />
-                  <span>Calculated Duration</span>
+                  <span>Duration</span>
                 </div>
-                <span className="font-black italic text-white">
-                  {duration} {bookingType === 'daily' ? (duration === 1 ? 'Day' : 'Days') : (duration === 1 ? 'Hour' : 'Hours')}
+                <span className={`font-black italic text-sm ${duration <= 0 ? 'text-zinc-600' : 'text-white animate-pulse'}`}>
+                  {duration} {bookingType === 'daily' ? 'Day(s)' : 'Hour(s)'}
                 </span>
               </div>
               <div className="h-[1px] bg-white/5 mb-4"></div>
-              <div className="flex justify-between items-end">
-                <p className="text-[10px] text-zinc-500 uppercase font-black tracking-widest">Total Price</p>
-                <div className="text-right">
-                    <p className="text-3xl font-black italic tracking-tighter text-blue-500">
-                        Rp {totalPrice.toLocaleString('id-ID')}
-                    </p>
-                    <p className="text-[8px] text-zinc-600 font-bold uppercase mt-1 tracking-tighter">Tax & Service Included</p>
-                </div>
+              <div className="flex justify-between items-end relative z-10">
+                <p className="text-[10px] text-zinc-500 uppercase font-black tracking-widest">Estimated Total</p>
+                <p className="text-3xl font-black italic tracking-tighter text-blue-500 transition-all">
+                   Rp {totalPrice.toLocaleString('id-ID')}
+                </p>
               </div>
             </div>
 
             <button 
               type="submit"
-              disabled={duration <= 0}
-              className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-white font-black py-5 rounded-[2rem] flex items-center justify-center gap-3 transition-all shadow-xl shadow-blue-600/20 uppercase italic tracking-widest text-xs"
+              disabled={duration <= 0 || isProcessing}
+              className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-900 disabled:text-zinc-700 disabled:border-white/5 border border-transparent text-white font-black py-6 rounded-[2rem] flex items-center justify-center gap-3 transition-all duration-500 uppercase italic tracking-[0.2em] text-xs shadow-xl shadow-blue-600/20 active:scale-95"
             >
-              <CreditCard size={18} />
-              Confirm Reservation
+              <CreditCard size={18} className={isProcessing ? "animate-bounce" : ""} />
+              {isProcessing ? 'Processing Payment...' : duration <= 0 ? 'Select Dates' : 'Confirm & Pay'}
             </button>
           </form>
         </div>

@@ -1,27 +1,32 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:8000', 
+  // Gunakan baseURL TANPA slash di akhir agar penggabungan URL lebih konsisten
+  baseURL: 'https://unobserving-dorinda-variatively.ngrok-free.dev', 
   timeout: 10000,
-  withCredentials: true, // Wajib untuk mengirim cookie session & XSRF-TOKEN
+  withCredentials: true, 
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
+    'ngrok-skip-browser-warning': 'true',
+    // Tambahkan header ini agar Laravel mengenali request sebagai AJAX
+    'X-Requested-With': 'XMLHttpRequest',
   },
 });
 
 // Interceptor untuk Request
 api.interceptors.request.use(
   (config) => {
-    // 1. Ambil token dari localStorage (Jika Anda menggunakan JWT)
+    // 1. JWT fallback (opsional jika Sanctum menggunakan cookie-based)
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    // 2. Penanganan Otomatis XSRF-TOKEN (Sanctum)
-    // Laravel menyimpan CSRF token di cookie bernama XSRF-TOKEN. 
-    // Browser biasanya mengirim ini otomatis, tapi membacanya secara manual memastikan konsistensi.
+    // 2. CSRF Token Manual (Hanya diperlukan jika Axios tidak membacanya otomatis)
+    // Sebenarnya Axios secara default mencari cookie bernama 'XSRF-TOKEN' 
+    // dan memasukkannya ke header 'X-XSRF-TOKEN'.
+    // Namun, cara manual Anda di bawah ini adalah backup yang bagus:
     const xsrfToken = document.cookie
       .split('; ')
       .find(row => row.startsWith('XSRF-TOKEN='))
@@ -31,10 +36,16 @@ api.interceptors.request.use(
       config.headers['X-XSRF-TOKEN'] = decodeURIComponent(xsrfToken);
     }
 
-    // 3. Otomatisasi Prefix /api
-    // Pastikan tidak merusak URL yang sudah lengkap atau request ke sanctum
-    if (config.url && !config.url.startsWith('http') && !config.url.includes('sanctum')) {
-      config.url = `/api${config.url.startsWith('/') ? config.url : '/' + config.url}`;
+    // 3. Otomatisasi Prefix /api (DIPERBAIKI)
+    if (config.url && !config.url.startsWith('http')) {
+       const isSanctum = config.url.includes('sanctum');
+       const alreadyHasApi = config.url.startsWith('/api') || config.url.startsWith('api');
+       
+       if (!isSanctum && !alreadyHasApi) {
+          // Pastikan format URL benar: /api/resource
+          const cleanUrl = config.url.startsWith('/') ? config.url : `/${config.url}`;
+          config.url = `/api${cleanUrl}`;
+       }
     }
 
     return config;
@@ -46,11 +57,17 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Jika backend mengembalikan 401 (Unauthorized) atau 419 (Page Expired/CSRF mismatch)
-    if (error.response && (error.response.status === 401 || error.response.status === 419)) {
-      console.error("Sesi berakhir atau CSRF token tidak valid.");
-      // localStorage.removeItem('token'); // Bersihkan jika perlu
-      // window.location.href = '/login'; // Opsional: redirect
+    // Tangani Session Expired secara proaktif
+    if (error.response) {
+      const status = error.response.status;
+      
+      if (status === 401 || status === 419) {
+        console.error("Sesi berakhir atau CSRF token tidak valid. Mengarahkan ke login...");
+        
+        // Opsional: Hapus data user di local jika session habis
+        // localStorage.removeItem('token');
+        // window.location.href = '/login'; 
+      }
     }
     return Promise.reject(error);
   }
