@@ -1,29 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { GoogleLogin } from '@react-oauth/google';
 import { X, Mail, Lock, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
-import api from '../api/axios';
 
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (response?: any) => void;
-  onManualLogin: (email: string, password: string) => Promise<void>; 
+  onManualLogin: (email: string, password: string) => Promise<void>;
   onSwitchToRegister: () => void;
   onError: (error?: any) => void;
 }
 
-export default function LoginModal({ 
-  isOpen, 
-  onClose, 
-  onSuccess, 
-  onManualLogin, 
-  onError, 
-  onSwitchToRegister 
+export default function LoginModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  onManualLogin,
+  onError,
+  onSwitchToRegister
 }: LoginModalProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Reset form saat modal dibuka/ditutup
+  useEffect(() => {
+    if (isOpen) {
+      setErrorMsg(null);
+      setEmail('');
+      setPassword('');
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -32,33 +40,36 @@ export default function LoginModal({
     if (isLoading) return;
 
     setIsLoading(true);
-    setErrorMsg(null); 
+    setErrorMsg(null);
 
     try {
-      // 1. Jalankan login (CSRF sudah ditangani di dalam onManualLogin App.tsx biasanya, 
-      // tapi jika tidak, pastikan api.get('/sanctum/csrf-cookie') terpanggil)
+      // Menunggu proses login selesai di level App.tsx / API
       await onManualLogin(email, password);
       
-      // 2. Jika sukses (tidak throw error), bersihkan form dan tutup
-      setEmail('');
-      setPassword('');
+      // Jika berhasil, panggil onSuccess
       onSuccess(); 
     } catch (err: any) {
-      console.error("Login Error:", err);
-      
-      // 3. Tangani pesan error dari Laravel
+      // Ambil pesan error detail dari Laravel
+      const responseData = err.response?.data;
       const status = err.response?.status;
-      const data = err.response?.data;
+
+      let message = "KONEKSI BERMASALAH";
 
       if (status === 422) {
-        // Error validasi (email/password salah format atau tidak cocok)
-        setErrorMsg(data.message || "INVALID CREDENTIALS");
+        // Jika Laravel mengirim ValidationException
+        const validationErrors = responseData?.errors;
+        message = validationErrors 
+          ? Object.values(validationErrors).flat()[0] as string 
+          : responseData?.message || "KREDENSIAL TIDAK COCOK";
       } else if (status === 419) {
-        setErrorMsg("SESSION EXPIRED. PLEASE REFRESH.");
+        message = "SESI KADALUARSA (CSRF), SILAKAN REFRESH HALAMAN";
+      } else if (status === 405) {
+        message = "METODE REQUEST SALAH (CEK NGROK/API)";
       } else {
-        setErrorMsg("CONNECTION ERROR. PLEASE TRY AGAIN.");
+        message = err.message || "TERJADI KESALAHAN PADA SERVER";
       }
-      
+
+      setErrorMsg(message.toUpperCase());
       onError(err);
     } finally {
       setIsLoading(false);
@@ -66,21 +77,25 @@ export default function LoginModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center px-6">
-      {/* Overlay dengan animasi fade */}
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center px-6">
+      {/* Overlay dengan transisi yang halus */}
       <div 
         className="absolute inset-0 bg-black/90 backdrop-blur-md animate-in fade-in duration-300" 
         onClick={onClose}
       />
 
-      <div className="relative w-full max-w-md bg-zinc-900 border border-white/10 rounded-[2.5rem] p-8 md:p-10 shadow-2xl animate-in zoom-in-95 duration-300">
+      <div className="relative w-full max-w-md bg-zinc-950 border border-white/10 rounded-[2.5rem] p-8 md:p-10 shadow-2xl animate-in zoom-in-95 duration-300">
+        {/* Tombol Close */}
         <button 
+          type="button"
           onClick={onClose}
-          className="absolute top-8 right-8 text-zinc-500 hover:text-white transition-colors p-2"
+          className="absolute top-6 right-6 text-zinc-500 hover:text-white transition-colors p-2 z-10"
+          aria-label="Close Modal"
         >
           <X size={20} />
         </button>
 
+        {/* Header */}
         <div className="text-center mb-10">
           <h2 className="text-3xl font-black italic tracking-tighter text-white uppercase">
             Welcome <span className="text-blue-600">Back</span>
@@ -90,7 +105,7 @@ export default function LoginModal({
           </p>
         </div>
 
-        {/* FEEDBACK ERROR */}
+        {/* Error Alert Section */}
         {errorMsg && (
           <div className="mb-6 flex items-start gap-3 bg-red-500/10 border border-red-500/20 p-4 rounded-2xl animate-in slide-in-from-top-2">
             <AlertCircle className="text-red-500 shrink-0 mt-0.5" size={14} />
@@ -101,32 +116,43 @@ export default function LoginModal({
         )}
 
         <form className="space-y-4 mb-8" onSubmit={handleSubmit}>
+          {/* Email Input */}
           <div className="relative group">
-            <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-blue-500 transition-colors" size={16} />
+            <Mail 
+              className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-blue-500 transition-colors" 
+              size={16} 
+            />
             <input 
               required
               type="email" 
-              value={email}
               autoComplete="email"
+              value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="EMAIL ADDRESS" 
-              className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-14 pr-4 text-xs font-bold text-white focus:border-blue-600 focus:bg-white/[0.08] outline-none transition-all placeholder:text-zinc-600"
+              className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-14 pr-4 text-xs font-bold text-white focus:border-blue-600 focus:bg-white/[0.08] outline-none transition-all placeholder:text-zinc-600 disabled:opacity-50"
+              disabled={isLoading}
             />
           </div>
 
+          {/* Password Input */}
           <div className="relative group">
-            <Lock className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-blue-500 transition-colors" size={16} />
+            <Lock 
+              className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-blue-500 transition-colors" 
+              size={16} 
+            />
             <input 
               required
               type="password" 
-              value={password}
               autoComplete="current-password"
+              value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="PASSWORD" 
-              className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-14 pr-4 text-xs font-bold text-white focus:border-blue-600 focus:bg-white/[0.08] outline-none transition-all placeholder:text-zinc-600"
+              className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-14 pr-4 text-xs font-bold text-white focus:border-blue-600 focus:bg-white/[0.08] outline-none transition-all placeholder:text-zinc-600 disabled:opacity-50"
+              disabled={isLoading}
             />
           </div>
 
+          {/* Submit Button */}
           <button 
             type="submit"
             disabled={isLoading}
@@ -140,31 +166,32 @@ export default function LoginModal({
           </button>
         </form>
 
+        {/* Divider */}
         <div className="relative mb-8 text-center">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-white/5"></div>
           </div>
-          <span className="relative bg-zinc-900 px-4 text-[9px] font-black text-zinc-600 uppercase tracking-widest">OR</span>
+          <span className="relative bg-zinc-950 px-4 text-[9px] font-black text-zinc-600 uppercase tracking-widest">
+            OR
+          </span>
         </div>
 
-        {/* GOOGLE LOGIN CONTAINER */}
+        {/* Google Login Section */}
         <div className="flex justify-center">
-          <div className="w-full max-w-sm flex justify-center scale-90 md:scale-100">
-             <GoogleLogin
-               onSuccess={onSuccess}
-               onError={() => {
-                 setErrorMsg("GOOGLE AUTHENTICATION FAILED");
-                 onError();
-               }}
-               theme="filled_blue"
-               shape="pill"
-               size="large"
-               text="continue_with"
-               width="320"
+          <div className="w-full flex justify-center scale-90 md:scale-100 overflow-hidden">
+            <GoogleLogin
+              onSuccess={(credentialResponse) => onSuccess(credentialResponse)}
+              onError={() => {
+                setErrorMsg("GOOGLE AUTHENTICATION FAILED");
+                onError();
+              }}
+              theme="filled_blue"
+              shape="pill"
             />
           </div>
         </div>
 
+        {/* Switch to Register */}
         <div className="text-center mt-10">
           <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">
             Don't have an account? 

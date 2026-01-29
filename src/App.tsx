@@ -21,14 +21,19 @@ import VehicleManager from './components/admin/VehicleManager';
 import './App.css';
 import type { Vehicle, Booking, Branch, UserRole } from './types';
 
+interface UserState {
+  name: string;
+  email: string;
+  picture?: string;
+  role: UserRole;
+}
+
 export default function App() {
   // --- State Management ---
-  const [user, setUser] = useState<{ 
-    name: string; email: string; picture?: string; role: UserRole 
-  } | null>(null);
+  const [user, setUser] = useState<UserState | null>(null);
   
   const [view, setView] = useState<'home' | 'history' | 'admin'>(() => {
-    return (localStorage.getItem('king_rental_view') as any) || 'home';
+    return (localStorage.getItem('king_rental_view') as 'home' | 'history' | 'admin') || 'home';
   });
 
   const [filter, setFilter] = useState('All'); 
@@ -60,9 +65,9 @@ export default function App() {
   }, [view]);
 
   // --- 1. Fetch Bookings ---
-  // Didefinisikan di atas agar bisa dipanggil saat inisialisasi atau login
   const fetchBookings = useCallback(async () => {
     if (!user) return;
+    // Fetch hanya jika di view history atau admin
     if (isAdmin || view === 'history') {
       try {
         const res = await api.get('/bookings');
@@ -79,7 +84,8 @@ export default function App() {
     const initializeApp = async () => {
       try {
         setIsLoading(true);
-        // Step 1: Ambil CSRF Cookie (Penting untuk Laravel Sanctum)
+        
+        // Step 1: Ambil CSRF Cookie
         await api.get('/sanctum/csrf-cookie').catch(() => null);
         
         // Step 2: Cek User Session
@@ -88,10 +94,10 @@ export default function App() {
             if (userRes?.data) {
               setUser(userRes.data);
               const role = String(userRes.data.role).toLowerCase();
-              // Kick non-admin dari view admin
               if (!role.includes('admin') && view === 'admin') setView('home');
             }
         } catch (err: any) {
+            // Jika 401 berarti belum login, abaikan error log
             if (err.response?.status !== 401) console.error("User Check Error:", err);
             if (view === 'admin' || view === 'history') setView('home');
             setUser(null);
@@ -109,9 +115,8 @@ export default function App() {
       }
     };
     initializeApp();
-  }, []); // Hanya run sekali saat aplikasi load
+  }, []);
 
-  // Trigger fetch bookings saat view berubah atau user berubah
   useEffect(() => {
     fetchBookings();
   }, [fetchBookings]);
@@ -160,15 +165,36 @@ export default function App() {
 
   const handleManualLogin = async (email: string, password: string) => {
     try {
-      await api.get('/sanctum/csrf-cookie'); // Re-init CSRF before login
-      const response = await api.post('/login', { email, password });
-      const userData = response.data.user;
-      setUser(userData);
-      setIsLoginOpen(false);
-      const role = String(userData.role).toLowerCase();
-      setView(role.includes('admin') ? 'admin' : 'home');
-      fetchBookings();
-    } catch (e: any) { throw e; }
+        await api.get('/sanctum/csrf-cookie');
+        const response = await api.post('/login', { email, password });
+        
+        const userData = response.data.user;
+        setUser(userData);
+        setIsLoginOpen(false);
+        
+        const role = String(userData.role).toLowerCase();
+        if (role.includes('admin')) {
+          setView('admin');
+        } else {
+          setView('home');
+        }
+    } catch (error: any) {
+        throw error; 
+    }
+  };
+
+  const handleManualRegister = async (data: any) => {
+    try {
+      await api.get('/sanctum/csrf-cookie');
+      await api.post('/register', data);
+      // Auto login setelah register jika API Laravel mendukung, 
+      // atau arahkan ke login modal
+      setIsRegisterOpen(false);
+      setIsLoginOpen(true);
+      alert("Registration successful! Please login.");
+    } catch (error: any) {
+      throw error;
+    }
   };
 
   const handleLogout = async () => {
@@ -188,7 +214,6 @@ export default function App() {
 
   const handleConfirmBooking = async (vehicle: Vehicle, start: string, end: string, total: number) => {
     try {
-      // 1. Create Booking
       const bookingRes = await api.post('/bookings', {
         vehicle_id: vehicle.id, 
         start_date: start, 
@@ -197,14 +222,11 @@ export default function App() {
       });
 
       const bookingId = (bookingRes.data.data || bookingRes.data).id;
-
-      // 2. Get Snap Token
       const tokenRes = await api.get(`/payments/token/${bookingId}`);
       const snapToken = tokenRes.data.snap_token;
 
       if (!snapToken) throw new Error("Snap Token tidak ditemukan.");
 
-      // 3. Open Snap
       return new Promise((resolve, reject) => {
         (window as any).snap.pay(snapToken, {
           onSuccess: (result: any) => {
@@ -399,11 +421,11 @@ export default function App() {
             onManualLogin={handleManualLogin} 
             onSwitchToRegister={() => { setIsLoginOpen(false); setIsRegisterOpen(true); }} 
             onSuccess={() => setIsLoginOpen(false)}
-            onError={(msg: string) => alert(msg)} 
+            onError={(err: any) => console.error(err)} 
         />
         <RegisterModal 
           isOpen={isRegisterOpen} onClose={() => setIsRegisterOpen(false)} 
-          onManualRegister={handleManualLogin} 
+          onManualRegister={handleManualRegister} 
           onSwitchToLogin={() => { setIsRegisterOpen(false); setIsLoginOpen(true); }} 
         />
         <VehicleDetailModal 
