@@ -165,20 +165,26 @@ export default function App() {
 
   const handleManualLogin = async (email: string, password: string) => {
     try {
-        await api.get('/sanctum/csrf-cookie');
+        // Menggunakan instance api (axios) yang sudah dikonfigurasi
         const response = await api.post('/login', { email, password });
         
-        const userData = response.data.user;
-        setUser(userData);
-        setIsLoginOpen(false);
+        // SINKRONISASI: Backend mengirim 'access_token', Frontend menyimpan sebagai 'token'
+        if (response.data.access_token) {
+        localStorage.setItem('token', response.data.access_token);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
         
-        const role = String(userData.role).toLowerCase();
-        if (role.includes('admin')) {
-          setView('admin');
-        } else {
-          setView('home');
+        // Update state user di App.tsx
+        setUser(response.data.user);
+
+        // PERBAIKAN DI SINI:
+        // Ganti setIsLoginModalOpen(false) menjadi setIsLoginOpen(false)
+        setIsLoginOpen(false); 
+        
+        // Memuat ulang data booking setelah login berhasil
+        fetchBookings();
         }
-    } catch (error: any) {
+    } catch (error) {
+        // Error ini akan ditangkap oleh LoginModal.tsx untuk ditampilkan ke user
         throw error; 
     }
   };
