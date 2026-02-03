@@ -16,6 +16,7 @@ import BookingFormModal from './components/BookingFormModal';
 import NearbyLocation from './components/NearbyLocation';
 import AdminDashboard from './components/admin/Dashboard';
 import VehicleManager from './components/admin/VehicleManager';
+import PaymentSummary from './components/PaymentSummary'; 
 
 // Styles & Types
 import './App.css';
@@ -26,6 +27,14 @@ interface UserState {
   email: string;
   picture?: string;
   role: UserRole;
+}
+
+// Interface untuk data dari BookingFormModal
+interface BookingFormData {
+  vehicleId: number | string;
+  startDate: string;
+  endDate: string;
+  totalPrice: number;
 }
 
 export default function App() {
@@ -41,6 +50,11 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true); 
   const [adminSubView, setAdminSubView] = useState<'stats' | 'fleet'>('stats');
   
+  // --- STATE PAYMENT FLOW ---
+  const [currentBookingId, setCurrentBookingId] = useState<number | null>(null);
+  const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+  const [tempBookingData, setTempBookingData] = useState<{startDate: string, endDate: string, totalPrice: number} | null>(null);
+
   // Modal States
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
@@ -59,7 +73,6 @@ export default function App() {
     return roleStr.includes('admin');
   }, [user]);
 
-  // Sync view to localStorage
   useEffect(() => {
     localStorage.setItem('king_rental_view', view);
   }, [view]);
@@ -67,7 +80,7 @@ export default function App() {
   // --- 1. Fetch Bookings ---
   const fetchBookings = useCallback(async () => {
     if (!user) return;
-    // Fetch hanya jika di view history atau admin
+    // Fetch jika user adalah admin atau sedang melihat history
     if (isAdmin || view === 'history') {
       try {
         const res = await api.get('/bookings');
@@ -84,26 +97,23 @@ export default function App() {
     const initializeApp = async () => {
       try {
         setIsLoading(true);
-        
-        // Step 1: Ambil CSRF Cookie
+        // Step 1: CSRF & User Check
         await api.get('/sanctum/csrf-cookie').catch(() => null);
         
-        // Step 2: Cek User Session
         try {
             const userRes = await api.get('/user');
             if (userRes?.data) {
               setUser(userRes.data);
+              // Validasi akses admin saat reload
               const role = String(userRes.data.role).toLowerCase();
               if (!role.includes('admin') && view === 'admin') setView('home');
             }
         } catch (err: any) {
-            // Jika 401 berarti belum login, abaikan error log
-            if (err.response?.status !== 401) console.error("User Check Error:", err);
             if (view === 'admin' || view === 'history') setView('home');
             setUser(null);
         }
         
-        // Step 3: Load Fleet Data
+        // Step 2: Load Vehicles
         const vehicleRes = await api.get('/vehicles');
         const vehicleData = Array.isArray(vehicleRes.data) ? vehicleRes.data : vehicleRes.data?.data;
         if (vehicleData) setVehicles(vehicleData);
@@ -121,14 +131,13 @@ export default function App() {
     fetchBookings();
   }, [fetchBookings]);
 
-  // --- 3. Helper: Resolve Branch Name ---
+  // --- Helpers ---
   const resolveBranchName = useCallback((branchData?: string | Branch): string => {
     if (!branchData) return 'Main Branch';
     if (typeof branchData === 'object' && branchData !== null) return branchData.name;
     return String(branchData);
   }, []);
 
-  // --- 4. Data Transformation for Admin ---
   const adminBookingRecords = useMemo(() => {
     return bookings.map(b => ({
       id: b.id,
@@ -141,50 +150,44 @@ export default function App() {
     }));
   }, [bookings, resolveBranchName]);
 
-  // --- 5. Handlers ---
+  // --- 3. Handlers ---
 
   const handleUpdateBookingStatus = async (id: string | number, newStatus: string) => {
+    // Optimistic Update
     const originalBookings = [...bookings];
-    let statusForBackend = newStatus.toLowerCase();
-    if (statusForBackend === 'active') statusForBackend = 'on_rent';
+    setBookings(prev => 
+      prev.map(b => b.id === id ? { ...b, status: newStatus as any } : b)
+    );
 
     try {
-      setBookings(prev => 
-        prev.map(b => b.id === id ? { ...b, status: newStatus as any } : b)
-      );
+      let statusForBackend = newStatus.toLowerCase(); 
+      if (statusForBackend === 'active') statusForBackend = 'on_rent'; 
+      if (statusForBackend === 'completed') statusForBackend = 'finished';
+
       await api.post(`/bookings/${id}`, { 
         _method: 'PUT', 
         status: statusForBackend 
       });
+      
+      // Optional: fetchBookings(); 
     } catch (error: any) {
-      setBookings(originalBookings);
-      alert("Gagal memperbarui status.");
-      fetchBookings(); 
+      console.error("Update Failed:", error);
+      alert("Gagal update status: " + (error.response?.data?.message || error.message));
+      setBookings(originalBookings); // Rollback
     }
   };
 
   const handleManualLogin = async (email: string, password: string) => {
     try {
-        // Menggunakan instance api (axios) yang sudah dikonfigurasi
         const response = await api.post('/login', { email, password });
-        
-        // SINKRONISASI: Backend mengirim 'access_token', Frontend menyimpan sebagai 'token'
         if (response.data.access_token) {
-        localStorage.setItem('token', response.data.access_token);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-        
-        // Update state user di App.tsx
-        setUser(response.data.user);
-
-        // PERBAIKAN DI SINI:
-        // Ganti setIsLoginModalOpen(false) menjadi setIsLoginOpen(false)
-        setIsLoginOpen(false); 
-        
-        // Memuat ulang data booking setelah login berhasil
-        fetchBookings();
+          localStorage.setItem('token', response.data.access_token);
+          localStorage.setItem('user', JSON.stringify(response.data.user));
+          setUser(response.data.user);
+          setIsLoginOpen(false); 
+          fetchBookings();
         }
     } catch (error) {
-        // Error ini akan ditangkap oleh LoginModal.tsx untuk ditampilkan ke user
         throw error; 
     }
   };
@@ -193,8 +196,6 @@ export default function App() {
     try {
       await api.get('/sanctum/csrf-cookie');
       await api.post('/register', data);
-      // Auto login setelah register jika API Laravel mendukung, 
-      // atau arahkan ke login modal
       setIsRegisterOpen(false);
       setIsLoginOpen(true);
       alert("Registration successful! Please login.");
@@ -218,73 +219,97 @@ export default function App() {
     }
   };
 
-  const handleConfirmBooking = async (vehicle: Vehicle, start: string, end: string, total: number) => {
+  // --- 4. CORE: Handle New Booking ---
+  const handleConfirmBooking = async (formData: BookingFormData) => {
+    setIsLoading(true); 
+
     try {
-      const bookingRes = await api.post('/bookings', {
-        vehicle_id: vehicle.id, 
-        start_date: start, 
-        end_date: end, 
-        total_price: total
-      });
+        // Mapping Payload untuk Laravel (snake_case)
+        const payload = {
+            vehicle_id: formData.vehicleId, 
+            start_date: formData.startDate,
+            end_date: formData.endDate,
+            total_price: formData.totalPrice,
+            payment_method: 'midtrans' 
+        };
 
-      const bookingId = (bookingRes.data.data || bookingRes.data).id;
-      const tokenRes = await api.get(`/payments/token/${bookingId}`);
-      const snapToken = tokenRes.data.snap_token;
+        console.log("Sending Payload:", payload);
 
-      if (!snapToken) throw new Error("Snap Token tidak ditemukan.");
+        // Kirim Request ke Backend
+        const response = await api.post('/bookings', payload);
+        const responseData = response.data;
 
-      return new Promise((resolve, reject) => {
-        (window as any).snap.pay(snapToken, {
-          onSuccess: (result: any) => {
-            setIsBookingFormOpen(false);
-            fetchBookings();
-            setView('history');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            resolve(result);
-          },
-          onPending: (result: any) => {
-            setIsBookingFormOpen(false);
-            fetchBookings();
-            setView('history');
-            resolve(result);
-          },
-          onError: (err: any) => {
-            alert("Terjadi kesalahan pada pembayaran.");
-            reject(err);
-          },
-          onClose: () => {
-            setIsBookingFormOpen(false);
-            fetchBookings();
-            setView('history');
-            resolve(null);
-          }
+        // Cari ID Booking dari response (Prioritas: booking_id -> data.id -> id)
+        const newBookingId = 
+            responseData.booking_id || 
+            responseData.data?.id || 
+            responseData.id;
+
+        if (!newBookingId) {
+            console.error("Invalid Response:", responseData);
+            throw new Error("Booking berhasil disimpan, namun ID tidak ditemukan dalam respon server.");
+        }
+
+        console.log("Booking Created. ID:", newBookingId);
+
+        // Update State untuk membuka Payment Modal
+        setCurrentBookingId(newBookingId);
+        setTempBookingData({
+            startDate: payload.start_date,
+            endDate: payload.end_date,
+            totalPrice: payload.total_price 
         });
-      });
 
-    } catch (e: any) { 
-      const errorMsg = e.response?.data?.message || e.message || "Proses booking gagal.";
-      alert(errorMsg);
-      throw e; 
+        // Tutup form, buka payment
+        setIsBookingFormOpen(false);
+        setIsPaymentOpen(true); 
+
+    } catch (error: any) {
+        console.error("Booking Error:", error);
+        
+        // Handle Error Validasi (422)
+        if (error.response?.status === 422) {
+            const errors = error.response.data.errors || {};
+            let msg = "Gagal membuat booking:\n";
+            
+            // Ambil pesan error detail jika ada
+            if (Object.keys(errors).length > 0) {
+                Object.keys(errors).forEach((key) => {
+                    msg += `- ${errors[key][0]}\n`;
+                });
+            } else {
+                msg += error.response.data.message || "Data tidak valid.";
+            }
+            alert(msg);
+        } else {
+            // Error Umum
+            alert(error.message || "Terjadi kesalahan saat membuat booking.");
+        }
+    } finally {
+        setIsLoading(false);
     }
   };
 
+  // --- 5. CORE: Handle Pay Existing (from History) ---
   const handlePayExistingBooking = async (bookingId: number | string) => {
-    try {
-      const res = await api.get(`/payments/token/${bookingId}`);
-      const snapToken = res.data.snap_token;
-
-      if (snapToken) {
-        (window as any).snap.pay(snapToken, {
-          onSuccess: () => fetchBookings(),
-          onPending: () => fetchBookings(),
-          onClose: () => fetchBookings()
+    // Cari data booking dari state lokal
+    const booking = bookings.find(b => b.id === Number(bookingId));
+    
+    if(booking) {
+        setCurrentBookingId(Number(bookingId));
+        setSelectedVehicle(booking.vehicle || null);
+        setTempBookingData({
+            startDate: booking.start_date,
+            endDate: booking.end_date,
+            totalPrice: Number(booking.total_price)
         });
-      }
-    } catch (e: any) {
-      alert("Gagal memuat pembayaran.");
+        setIsPaymentOpen(true);
+    } else {
+        console.error("Booking data not found locally");
     }
   };
 
+  // --- Filter Logic ---
   const filteredVehicles = useMemo(() => {
     return vehicles.filter(v => {
       const matchesCategory = filter === 'All' || v.type === filter;
@@ -333,6 +358,7 @@ export default function App() {
           </div>
         )}
 
+        {/* History View */}
         {view === 'history' && user && (
           <div className="pt-40 pb-20 px-6 max-w-5xl mx-auto min-h-screen animate-in slide-in-from-bottom-4 duration-700">
             <h2 className="text-5xl font-black italic text-white uppercase tracking-tighter mb-16">My Journey</h2>
@@ -340,22 +366,22 @@ export default function App() {
               <div className="grid gap-6">
                 {bookings.map((booking) => (
                   <div key={booking.id} className="group p-8 bg-zinc-900/30 rounded-[2.5rem] border border-white/5 hover:border-blue-600/40 transition-all backdrop-blur-sm">
-                    <div className="flex flex-col md:flex-row justify-between gap-8">
-                      <div className="space-y-4">
-                        <span className="px-3 py-1 bg-blue-600/10 text-blue-500 text-[10px] font-black rounded-lg border border-blue-500/20">#{booking.id}</span>
-                        <h3 className="text-3xl font-black italic tracking-tighter uppercase">{booking.vehicle?.name || 'Unit'}</h3>
-                        <div className="flex gap-4 text-zinc-500 text-[11px] font-black uppercase">
-                          <span>{booking.start_date}</span>
-                          <span>→</span>
-                          <span>{resolveBranchName(booking.vehicle?.branch || booking.branch)}</span>
-                        </div>
-                      </div>
-                      <div className="text-right flex flex-col items-end gap-3">
-                        <p className="text-3xl font-black text-white italic">
-                          Rp {(Number(booking.total_price) || 0).toLocaleString('id-ID')}
-                        </p>
-                        
-                        <div className="flex flex-col items-end gap-2">
+                      <div className="flex flex-col md:flex-row justify-between gap-8">
+                       <div className="space-y-4">
+                         <span className="px-3 py-1 bg-blue-600/10 text-blue-500 text-[10px] font-black rounded-lg border border-blue-500/20">#{booking.id}</span>
+                         <h3 className="text-3xl font-black italic tracking-tighter uppercase">{booking.vehicle?.name || 'Unit'}</h3>
+                         <div className="flex gap-4 text-zinc-500 text-[11px] font-black uppercase">
+                           <span>{booking.start_date}</span>
+                           <span>→</span>
+                           <span>{resolveBranchName(booking.vehicle?.branch || booking.branch)}</span>
+                         </div>
+                       </div>
+                       <div className="text-right flex flex-col items-end gap-3">
+                         <p className="text-3xl font-black text-white italic">
+                           Rp {(Number(booking.total_price) || 0).toLocaleString('id-ID')}
+                         </p>
+                         
+                         <div className="flex flex-col items-end gap-2">
                             <span className={`text-[10px] uppercase font-black px-4 py-1.5 rounded-full ${
                             ['paid', 'approved', 'on_rent', 'finished'].includes(booking.status) ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 
                             booking.status === 'pending' ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 
@@ -363,19 +389,19 @@ export default function App() {
                             }`}>
                             {booking.status}
                             </span>
-
+                            {/* Tombol Bayar Ulang jika Pending */}
                             {booking.status === 'pending' && (
                                 <button 
                                     onClick={() => handlePayExistingBooking(booking.id)}
-                                    className="text-[10px] font-black uppercase bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-blue-600/20"
+                                    className="text-[10px] font-black uppercase bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-blue-600/20 active:scale-95"
                                 >
                                     Pay Now
                                 </button>
                             )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                         </div>
+                       </div>
+                     </div>
+                   </div>
                 ))}
               </div>
             ) : (
@@ -386,9 +412,10 @@ export default function App() {
           </div>
         )}
 
+        {/* Admin View */}
         {view === 'admin' && isAdmin && (
-          <div className="pt-32 pb-20 px-4 md:px-10 w-full max-w-[1600px] mx-auto min-h-screen block animate-in fade-in duration-500">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
+           <div className="pt-32 pb-20 px-4 md:px-10 w-full max-w-[1600px] mx-auto min-h-screen block animate-in fade-in duration-500">
+             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
               <h1 className="text-5xl font-black italic uppercase tracking-tighter">KING <span className="text-blue-600">OPS</span></h1>
               <div className="flex p-1 bg-zinc-900 rounded-2xl border border-white/5">
                 <button 
@@ -415,12 +442,13 @@ export default function App() {
                 <VehicleManager />
               )}
             </div>
-          </div>
+           </div>
         )}
       </main>
 
       <FloatingContact />
       
+      {/* --- MODALS SECTION --- */}
       <div className="modal-root">
         <LoginModal 
             isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} 
@@ -447,6 +475,49 @@ export default function App() {
           onClose={() => { setIsBookingFormOpen(false); setSelectedVehicle(null); }} 
           onConfirm={handleConfirmBooking} 
         />
+        
+        {/* --- PAYMENT SUMMARY MODAL --- */}
+
+        {isPaymentOpen && currentBookingId && selectedVehicle && (
+            <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in">
+                <div className="w-full max-w-md">
+                    <PaymentSummary
+                        bookingId={currentBookingId}
+                        vehicle={selectedVehicle}
+                        startDate={tempBookingData?.startDate || ''}
+                        endDate={tempBookingData?.endDate || ''}
+                        totalPrice={tempBookingData?.totalPrice || 0}
+                        
+                        // 1. PEMBAYARAN SUKSES
+                        onPaymentSuccess={(result) => {
+                            console.log('Success:', result);
+                            setIsPaymentOpen(false); // Tutup modal
+                            setView('history');      // Pindah ke tab History
+                            fetchBookings();         // Tarik data terbaru dari DB
+                            alert("Pembayaran Berhasil! Silakan cek status di History.");
+                        }}
+                        
+                        // 2. PEMBAYARAN PENDING (User tutup popup tapi belum bayar, atau VA dibuat)
+                        onPaymentPending={(result) => {
+                            console.log('Pending:', result);
+                            setIsPaymentOpen(false);
+                            setView('history');
+                            fetchBookings();
+                            alert("Menunggu Pembayaran. Cek instruksi di email/history.");
+                        }}
+                        
+                        // 3. PEMBAYARAN GAGAL
+                        onPaymentError={(result) => {
+                            console.log('Error:', result);
+                            // Modal jangan ditutup biar user bisa coba lagi atau cancel
+                        }}
+                        
+                        // 4. BATAL
+                        onCancel={() => setIsPaymentOpen(false)}
+                    />
+                </div>
+            </div>
+        )}
       </div>
     </div>
   );

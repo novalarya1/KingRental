@@ -1,12 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, CreditCard, Clock, Timer, Loader2 } from 'lucide-react';
+import { X, Calendar, CreditCard, Timer, Loader2 } from 'lucide-react';
 import type { Vehicle } from '../types';
 
 interface BookingFormProps {
   isOpen: boolean;
   vehicle: Vehicle | null;
   onClose: () => void;
-  onConfirm: (vehicle: Vehicle, startDate: string, endDate: string, totalPrice: number) => void;
+  // Define the expected structure for the callback
+  onConfirm: (bookingData: { 
+    vehicleId: number | string;
+    startDate: string;
+    endDate: string;
+    totalPrice: number 
+  }) => void;
 }
 
 export default function BookingFormModal({ isOpen, vehicle, onClose, onConfirm }: BookingFormProps) {
@@ -19,7 +25,7 @@ export default function BookingFormModal({ isOpen, vehicle, onClose, onConfirm }
   const [totalPrice, setTotalPrice] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Efek untuk menghitung harga otomatis
+  // Price Calculation Logic
   useEffect(() => {
     if (!vehicle || !startDate) {
       setDuration(0);
@@ -73,10 +79,17 @@ export default function BookingFormModal({ isOpen, vehicle, onClose, onConfirm }
       const finalStart = bookingType === 'hourly' ? `${startDate} ${startTime}:00` : `${startDate} 00:00:00`;
       const finalEnd = bookingType === 'hourly' ? `${startDate} ${endTime}:00` : `${endDate} 23:59:59`;
       
-      // onConfirm harus async di App.tsx agar await ini berfungsi
-      await onConfirm(vehicle, finalStart, finalEnd, totalPrice);
+      // --- CRITICAL FIX HERE ---
+      // We send a specific object, NOT the vehicle object
+      await onConfirm({
+        vehicleId: vehicle.id, 
+        startDate: finalStart,
+        endDate: finalEnd,
+        totalPrice: totalPrice
+      });
+
     } catch (error) {
-      console.error("Gagal memproses booking:", error);
+      console.error("Booking processing failed:", error);
     } finally {
       setIsProcessing(false);
     }
@@ -86,12 +99,11 @@ export default function BookingFormModal({ isOpen, vehicle, onClose, onConfirm }
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-300">
       <div className="bg-zinc-950 border border-white/10 w-full max-w-lg rounded-[2.5rem] md:rounded-[3.5rem] overflow-hidden shadow-2xl relative">
         
-        {/* Overlay Loading saat proses Payment Gateway */}
         {isProcessing && (
           <div className="absolute inset-0 z-[120] bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center text-center p-8">
             <Loader2 size={40} className="text-blue-500 animate-spin mb-4" />
             <h3 className="text-xl font-black italic uppercase text-white tracking-tighter">Securing Your Ride</h3>
-            <p className="text-zinc-400 text-[10px] font-bold uppercase tracking-widest mt-2">Please wait, connecting to payment gateway...</p>
+            <p className="text-zinc-400 text-[10px] font-bold uppercase tracking-widest mt-2">Please wait...</p>
           </div>
         )}
 
@@ -112,6 +124,7 @@ export default function BookingFormModal({ isOpen, vehicle, onClose, onConfirm }
             </button>
           </div>
 
+          {/* Form Content */}
           <div className="flex bg-white/5 p-1.5 rounded-2xl mb-8 border border-white/5">
             {(['daily', 'hourly'] as const).map((type) => (
               <button 
@@ -209,7 +222,7 @@ export default function BookingFormModal({ isOpen, vehicle, onClose, onConfirm }
               className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-900 disabled:text-zinc-700 disabled:border-white/5 border border-transparent text-white font-black py-6 rounded-[2rem] flex items-center justify-center gap-3 transition-all duration-500 uppercase italic tracking-[0.2em] text-xs shadow-xl shadow-blue-600/20 active:scale-95"
             >
               <CreditCard size={18} className={isProcessing ? "animate-bounce" : ""} />
-              {isProcessing ? 'Processing Payment...' : duration <= 0 ? 'Select Dates' : 'Confirm & Pay'}
+              {isProcessing ? 'Processing...' : duration <= 0 ? 'Select Dates' : 'Confirm & Pay'}
             </button>
           </form>
         </div>

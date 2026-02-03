@@ -6,16 +6,16 @@ interface RegisterModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSwitchToLogin: () => void;
-  // Update interface untuk menerima phone dan address
-  onManualRegister: (name: string, email: string, password: string, phone: string, address: string) => Promise<void>;
+  // Pastikan props ini match dengan yang dikirim dari App.tsx
+  onManualRegister: (data: any) => Promise<void>; 
 }
 
 export default function RegisterModal({ isOpen, onClose, onSwitchToLogin, onManualRegister }: RegisterModalProps) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [phone, setPhone] = useState('');     // State Baru
-  const [address, setAddress] = useState(''); // State Baru
+  const [phone, setPhone] = useState('');     
+  const [address, setAddress] = useState(''); 
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -27,38 +27,50 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin, onManu
     setErrorMsg(null);
 
     try {
+      // Pastikan CSRF cookie sudah ada (standar sanctum)
       await api.get('/sanctum/csrf-cookie');
       
-      // Kirim 5 parameter ke App.tsx
-      await onManualRegister(name, email, password, phone, address);
+      // Susun data dalam object agar lebih rapi saat dikirim
+      const registerData = {
+          name,
+          email,
+          password,
+          password_confirmation: password, // Laravel biasanya butuh ini
+          phone,
+          address
+      };
+
+      // Panggil fungsi dari Parent (App.tsx)
+      await onManualRegister(registerData);
       
-      // Reset Form
+      // Reset Form jika sukses
       setName('');
       setEmail('');
       setPassword('');
       setPhone('');
       setAddress('');
+      
     } catch (err: any) {
       console.error("Registration error:", err);
-      const message = err.response?.data?.message || "Registration failed. Please check your data.";
-      setErrorMsg(message.toUpperCase());
+      // Ambil pesan error spesifik jika ada
+      const message = err.response?.data?.message || "Registration failed. Please check your inputs.";
+      setErrorMsg(message);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-[150] flex items-center justify-center px-6">
+    <div className="fixed inset-0 z-[150] flex items-center justify-center px-4 md:px-6">
       <div 
         className="absolute inset-0 bg-black/80 backdrop-blur-md animate-in fade-in duration-300"
         onClick={onClose}
       />
 
-      {/* Ukuran modal sedikit diperlebar (max-w-lg) agar nyaman dengan banyak field */}
       <div className="relative w-full max-w-lg bg-zinc-900 border border-white/10 rounded-[2.5rem] p-8 md:p-10 shadow-2xl animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto custom-scrollbar">
         <button 
           onClick={onClose}
-          className="absolute top-6 right-6 text-zinc-500 hover:text-white transition-colors"
+          className="absolute top-6 right-6 text-zinc-500 hover:text-white transition-colors z-10"
         >
           <X size={24} />
         </button>
@@ -73,8 +85,8 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin, onManu
         </div>
 
         {errorMsg && (
-          <div className="mb-6 flex items-center gap-3 bg-red-500/10 border border-red-500/20 p-4 rounded-2xl animate-in slide-in-from-top-2">
-            <AlertCircle className="text-red-500 flex-shrink-0" size={16} />
+          <div className="mb-6 flex items-start gap-3 bg-red-500/10 border border-red-500/20 p-4 rounded-2xl animate-in slide-in-from-top-2">
+            <AlertCircle className="text-red-500 flex-shrink-0 mt-0.5" size={16} />
             <p className="text-red-500 text-[10px] font-bold uppercase tracking-widest leading-relaxed">
               {errorMsg}
             </p>
@@ -146,13 +158,14 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin, onManu
               onChange={(e) => setPassword(e.target.value)}
               className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-sm font-bold focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none transition-all placeholder:text-zinc-600 text-white"
               required
+              minLength={8} // Best practice
             />
           </div>
 
           <button 
             type="submit"
             disabled={isLoading}
-            className="w-full bg-white text-black font-black uppercase py-4 rounded-2xl hover:bg-blue-600 hover:text-white transition-all duration-300 shadow-xl shadow-white/5 text-sm tracking-widest flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-white text-black font-black uppercase py-4 rounded-2xl hover:bg-blue-600 hover:text-white transition-all duration-300 shadow-xl shadow-white/5 text-sm tracking-widest flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed mt-6"
           >
             {isLoading ? <Loader2 className="animate-spin" size={20} /> : "Create Account"}
           </button>
