@@ -153,27 +153,40 @@ export default function App() {
   // --- 3. Handlers ---
 
   const handleUpdateBookingStatus = async (id: string | number, newStatus: string) => {
-    // Optimistic Update
+    // 1. Optimistic Update (Update UI duluan biar terasa cepat)
     const originalBookings = [...bookings];
     setBookings(prev => 
       prev.map(b => b.id === id ? { ...b, status: newStatus as any } : b)
     );
 
     try {
+      // 2. Normalisasi Status
       let statusForBackend = newStatus.toLowerCase(); 
+      
+      // Mapping khusus (Sesuaikan dengan Database Anda)
+      // Contoh: Jika di UI 'Active', di DB 'on_rent'
       if (statusForBackend === 'active') statusForBackend = 'on_rent'; 
       if (statusForBackend === 'completed') statusForBackend = 'finished';
 
-      await api.post(`/bookings/${id}`, { 
-        _method: 'PUT', 
+      console.log(`Updating ID ${id} to ${statusForBackend}...`);
+
+      // 3. Kirim Request PUT (JANGAN PAKAI POST)
+      // Hapus "_method: 'PUT'" karena kita sudah pakai method asli
+      await api.put(`/bookings/${id}`, { 
         status: statusForBackend 
       });
       
-      // Optional: fetchBookings(); 
+      console.log("Status updated successfully");
+
     } catch (error: any) {
       console.error("Update Failed:", error);
-      alert("Gagal update status: " + (error.response?.data?.message || error.message));
-      setBookings(originalBookings); // Rollback
+      
+      // Tampilkan pesan error
+      const msg = error.response?.data?.message || "Gagal update status";
+      alert(msg);
+
+      // 4. Rollback (Kembalikan ke status lama jika gagal)
+      setBookings(originalBookings); 
     }
   };
 
