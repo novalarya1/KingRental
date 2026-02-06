@@ -21,7 +21,8 @@ export default function VehicleManager() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-  const STORAGE_URL = "http://localhost:8000/storage/";
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+  const STORAGE_URL = `${API_URL}/admin/storage/`;
 
   const [formData, setFormData] = useState<VehicleFormData>({
     name: '',
@@ -33,14 +34,16 @@ export default function VehicleManager() {
     img: null
   });
 
+  // --- READ: Fetch Data ---
   const fetchVehicles = useCallback(async () => {
     setIsLoading(true);
     try {
       const res = await api.get('/vehicles');
-      const data = Array.isArray(res.data) ? res.data : res.data.data;
+      // Handle response Laravel (bisa array langsung atau dibungkus .data)
+      const data = Array.isArray(res.data) ? res.data : res.data?.data || [];
       setVehicles(data);
     } catch (err) {
-      console.error("Failed to fetch vehicles");
+      console.error("Failed to fetch vehicles", err);
     } finally {
       setIsLoading(false);
     }
@@ -50,18 +53,21 @@ export default function VehicleManager() {
     fetchVehicles(); 
   }, [fetchVehicles]);
 
+  // --- PREVIEW IMAGE LOGIC ---
   useEffect(() => {
     if (formData.img instanceof File) {
+      // Jika user upload file baru -> Buat Blob URL sementara
       const objectUrl = URL.createObjectURL(formData.img);
       setPreviewUrl(objectUrl);
       return () => URL.revokeObjectURL(objectUrl);
     } else if (typeof formData.img === 'string' && formData.img !== '') {
+      // Jika data dari DB -> Cek apakah full URL atau path
       const fullUrl = formData.img.startsWith('http') ? formData.img : `${STORAGE_URL}${formData.img}`;
       setPreviewUrl(fullUrl);
     } else {
       setPreviewUrl(null);
     }
-  }, [formData.img]);
+  }, [formData.img, STORAGE_URL]);
 
   const resetForm = () => {
     setFormData({ 
@@ -72,29 +78,28 @@ export default function VehicleManager() {
     setPreviewUrl(null);
   };
 
+  // --- EDIT: Populate Form ---
   const handleEdit = (vehicle: Vehicle) => {
     setEditingVehicle(vehicle);
     
-    const rawPrice = (vehicle as any).price_per_day || (vehicle as any).price || 0;
-    let numericPrice = typeof rawPrice === 'string' 
-      ? parseFloat(rawPrice.replace(/[^0-9.-]+/g, "")) 
-      : Number(rawPrice);
-    
-    if (numericPrice >= 1000) numericPrice = numericPrice / 1000;
+    // Konversi Harga DB (350000) -> Input UI (350)
+    const rawPrice = Number((vehicle as any).price_per_day || (vehicle as any).price || 0);
+    const displayPrice = rawPrice >= 1000 ? rawPrice / 1000 : rawPrice;
 
     setFormData({
       name: vehicle.name || '',
       type: vehicle.type || 'Luxury',
-      price_per_day: numericPrice.toString(),
-      seats: vehicle.seats?.toString() || '4',
+      price_per_day: displayPrice.toString(),
+      seats: (vehicle as any).seats?.toString() || (vehicle as any).capacity?.toString() || '4',
       transmission: vehicle.transmission || 'Automatic',
-      // Mengatasi error 'is_available' property missing dengan any casting
-      is_available: (vehicle as any).is_available ? '1' : '0',
-      img: vehicle.img || null
+      // Pastikan boolean/number dikonversi ke string '1'/'0'
+      is_available: ((vehicle as any).is_available === true || (vehicle as any).is_available === 1 || (vehicle as any).is_available === '1') ? '1' : '0',
+      img: vehicle.img || (vehicle as any).image_url || null
     });
     setIsModalOpen(true);
   };
 
+  // --- CREATE & UPDATE: Submit Form ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -102,18 +107,28 @@ export default function VehicleManager() {
     const data = new FormData();
     data.append('name', formData.name);
     data.append('type', formData.type);
-    data.append('price_per_day', formData.price_per_day);
-    data.append('seats', formData.seats);
+    
+    // Konversi Harga Input UI (350) -> DB (350000)
+    const dbPrice = parseFloat(formData.price_per_day) * 1000;
+    data.append('price_per_day', dbPrice.toString());
+    
+    // Kirim field yang sesuai dengan Controller
+    data.append('seats', formData.seats); 
+    data.append('capacity', formData.seats); // Mapping untuk backend
     data.append('transmission', formData.transmission);
     data.append('is_available', formData.is_available);
     
+    // Kirim gambar HANYA jika ada file baru
     if (formData.img instanceof File) {
-      data.append('img', formData.img);
+      // Backend Controller biasanya menangkap $request->file('image')
+      data.append('image', formData.img); 
     }
 
     try {
       if (editingVehicle) {
+        // [TRICK] Method Spoofing untuk Laravel PUT dengan File Upload
         data.append('_method', 'PUT'); 
+        
         await api.post(`/vehicles/${editingVehicle.id}`, data, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
@@ -122,26 +137,44 @@ export default function VehicleManager() {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
       }
+      
       setIsModalOpen(false);
-      fetchVehicles();
+      fetchVehicles(); // Refresh data tabel
       resetForm();
+      alert(editingVehicle ? "Unit updated successfully!" : "New unit added successfully!");
+
     } catch (err: any) {
-      alert(err.response?.data?.message || "Operation failed");
+      console.error(err);
+      const msg = err.response?.data?.message || "Operation failed";
+      alert("Error: " + msg);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Perbaikan tipe ID: Menyesuaikan dengan Vehicle.id (number)
+  // --- DELETE: Remove Data ---
   const handleDelete = async (id: number) => {
-    if (window.confirm("Permanent delete this unit?")) {
+    if (window.confirm("Are you sure you want to PERMANENTLY delete this unit?")) {
       try {
         await api.delete(`/vehicles/${id}`);
-        fetchVehicles();
+        // Optimistic update
+        setVehicles(prev => prev.filter(v => Number(v.id) !== id));
+        alert("Unit removed from database.");
       } catch (err) {
-        alert("Delete failed");
+        alert("Delete failed. Unit might have active bookings.");
+        fetchVehicles(); // Sync ulang jika gagal
       }
     }
+  };
+
+  // Helper Display
+  const getDisplayPrice = (v: Vehicle) => {
+      const p = (v as any).price_per_day || (v as any).price || 0;
+      return Number(p).toLocaleString('id-ID');
+  };
+
+  const isAvailableCheck = (v: Vehicle) => {
+      return (v as any).is_available === true || (v as any).is_available === 1 || (v as any).is_available === '1';
   };
 
   return (
@@ -181,17 +214,22 @@ export default function VehicleManager() {
                   </td>
                 </tr>
               ) : vehicles.map((v) => {
-                const rawPrice = (v as any).price_per_day || (v as any).price || 0;
-                let numericPrice = typeof rawPrice === 'string' ? parseFloat(rawPrice.replace(/[^0-9.-]+/g, "")) : Number(rawPrice);
-                if (numericPrice > 0 && numericPrice < 10000) numericPrice *= 1000;
+                const available = isAvailableCheck(v);
+                
+                // Handling Image URL fallback
+                const imgSrc = v.img 
+                    ? (v.img.startsWith('http') ? v.img : `${STORAGE_URL}${v.img}`)
+                    : (v as any).image_url 
+                    ? (v as any).image_url 
+                    : 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?q=80&w=800';
 
                 return (
                   <tr key={v.id} className="hover:bg-white/[0.02] transition-colors group">
                     <td className="p-8">
                       <div className="flex items-center gap-5">
-                        <div className="w-24 h-14 rounded-xl overflow-hidden bg-black border border-white/10">
+                        <div className="w-24 h-14 rounded-xl overflow-hidden bg-black border border-white/10 relative">
                           <img 
-                            src={v.img?.startsWith('http') ? v.img : `${STORAGE_URL}${v.img}`} 
+                            src={imgSrc} 
                             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
                             alt={v.name} 
                             onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?q=80&w=800'; }}
@@ -200,28 +238,31 @@ export default function VehicleManager() {
                         <div>
                           <span className="font-black text-sm text-zinc-200 uppercase italic block">{v.name}</span>
                           <span className="text-[9px] text-zinc-500 uppercase font-bold tracking-tighter">
-                            {v.type} • {v.transmission} • {v.seats} Seats
+                            {v.type} • {v.transmission} • {(v as any).capacity || (v as any).seats} Seats
                           </span>
                         </div>
                       </div>
                     </td>
                     <td className="p-8">
                       <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter border ${
-                        (v as any).is_available 
+                        available
                         ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' 
                         : 'bg-red-500/10 text-red-500 border-red-500/20'
                       }`}>
-                        {(v as any).is_available ? 'Available' : 'Unavailable'}
+                        {available ? 'Available' : 'Unavailable'}
                       </span>
                     </td>
                     <td className="p-8 font-mono text-blue-500 font-black text-right">
-                      Rp {numericPrice.toLocaleString('id-ID')}
+                      Rp {getDisplayPrice(v)}
                     </td>
                     <td className="p-8 text-right">
                       <div className="flex justify-end gap-3">
-                        <button onClick={() => handleEdit(v)} className="p-3 bg-zinc-800 hover:bg-blue-600 text-zinc-400 hover:text-white rounded-xl transition-all shadow-lg active:scale-90"><Pencil size={14} /></button>
-                        {/* Fix: Mengirim v.id (number) sesuai ekspektasi handleDelete */}
-                        <button onClick={() => handleDelete(Number(v.id))} className="p-3 bg-zinc-800 hover:bg-red-600 text-zinc-400 hover:text-white rounded-xl transition-all shadow-lg active:scale-90"><Trash2 size={14} /></button>
+                        <button onClick={() => handleEdit(v)} className="p-3 bg-zinc-800 hover:bg-blue-600 text-zinc-400 hover:text-white rounded-xl transition-all shadow-lg active:scale-90">
+                            <Pencil size={14} />
+                        </button>
+                        <button onClick={() => handleDelete(Number(v.id))} className="p-3 bg-zinc-800 hover:bg-red-600 text-zinc-400 hover:text-white rounded-xl transition-all shadow-lg active:scale-90">
+                            <Trash2 size={14} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -232,7 +273,7 @@ export default function VehicleManager() {
         </div>
       </div>
 
-      {/* MODAL SECTION TETAP SAMA SEPERTI SEBELUMNYA */}
+      {/* MODAL FORM */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center p-6">
           <div className="absolute inset-0 bg-black/95 backdrop-blur-md" onClick={() => !isSubmitting && setIsModalOpen(false)}></div>
@@ -269,6 +310,7 @@ export default function VehicleManager() {
                   <option>Sport</option>
                   <option>SUV</option>
                   <option>Electric</option>
+                  <option>Family</option>
                 </select>
               </div>
 
@@ -285,7 +327,7 @@ export default function VehicleManager() {
                     }`}
                   >
                     <option value="1">Available (Aktif)</option>
-                    <option value="0">Unavailable (Non-Aktif)</option>
+                    <option value="0">Unavailable (Maintenance)</option>
                   </select>
                   <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" size={16} />
                 </div>
@@ -320,8 +362,8 @@ export default function VehicleManager() {
               <div>
                 <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest block mb-3">Passenger Seats</label>
                 <div className="relative">
-                   <Users className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-600" size={16} />
-                   <select 
+                    <Users className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-600" size={16} />
+                    <select 
                     value={formData.seats} 
                     onChange={e => setFormData({...formData, seats: e.target.value})}
                     className="w-full bg-black border border-white/10 rounded-2xl py-5 pl-12 pr-5 text-sm text-white focus:border-blue-500 outline-none font-bold appearance-none cursor-pointer"

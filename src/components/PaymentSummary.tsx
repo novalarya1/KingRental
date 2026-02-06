@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Calendar, MapPin, CreditCard, AlertCircle, X, ShieldCheck } from 'lucide-react';
 import type { Vehicle } from '../types'; 
-import api from '../api/axios'; // Pastikan path ini benar
+import api from '../api/axios'; // Ensure this path is correct
+import axios from 'axios'; // Import axios directly for 'isAxiosError' check
 
-// Definisi agar TypeScript tidak error saat akses window.snap
+// Global declaration for Midtrans Snap
 declare global {
   interface Window {
     snap: any;
@@ -16,7 +17,7 @@ interface PaymentSummaryProps {
   startDate: string;
   endDate: string;
   totalPrice: number;
-  // Callback ke Parent (App.tsx)
+  // Callbacks
   onPaymentSuccess: (result: any) => void;
   onPaymentPending: (result: any) => void;
   onPaymentError: (result: any) => void;
@@ -37,23 +38,23 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // --- 1. Helper: Load Script Midtrans Dinamis ---
+  // --- 1. Helper: Dynamically Load Midtrans Script ---
   const loadMidtransScript = (clientKey: string): Promise<void> => {
     return new Promise((resolve, reject) => {
       const scriptId = 'midtrans-script';
       const existingScript = document.getElementById(scriptId) as HTMLScriptElement;
 
-      // Cek apakah Sandbox atau Production (Otomatis dari Key)
+      // Detect Environment (Sandbox vs Production) based on Key
       const isSandbox = clientKey.includes('SB-');
       const scriptUrl = isSandbox 
         ? 'https://app.sandbox.midtrans.com/snap/snap.js' 
-        : 'https://app.midtrans.com/snap/snap.js';
+        : 'https://app.sandbox.midtrans.com/snap/snap.js';
 
       if (existingScript) {
         if (existingScript.src !== scriptUrl) {
-           document.body.removeChild(existingScript); // Hapus jika beda env
+           document.body.removeChild(existingScript); // Remove if environment changed
         } else {
-           resolve(); // Script sudah ada
+           resolve(); // Script exists and matches
            return;
         }
       }
@@ -63,7 +64,7 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
       script.id = scriptId;
       script.setAttribute('data-client-key', clientKey);
       script.onload = () => resolve();
-      script.onerror = () => reject(new Error('Gagal memuat koneksi ke Midtrans.'));
+      script.onerror = () => reject(new Error('Failed to load Midtrans connection.'));
       document.body.appendChild(script);
     });
   };
@@ -71,26 +72,33 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
   // --- 2. Main Logic: Handle Pay Button ---
   const handlePayment = async () => {
     if (!bookingId) return;
+    
     setIsLoading(true);
     setErrorMessage(null);
 
     try {
-      // A. Minta Token ke Backend
-      // (Authorization Header otomatis ada di api/axios.ts)
+      console.log("Initiating payment for Booking ID:", bookingId);
+
+      // --- STEP A: Request Token from Backend ---
+      // NOTE: If you are getting a 405 Method Not Allowed, change api.get to api.post
       const response = await api.get(`/bookings/${bookingId}/payment-token`);
+      
+      console.log("Backend Response:", response.data); 
+
       const { snap_token, client_key } = response.data;
 
-      if (!snap_token || !client_key) throw new Error("Gagal mengambil token transaksi.");
+      if (!snap_token || !client_key) {
+        throw new Error("Invalid response: 'snap_token' or 'client_key' missing.");
+      }
 
-      // B. Load Script Midtrans
+      // --- STEP B: Load Midtrans Script ---
       await loadMidtransScript(client_key);
 
-      // C. Buka Popup Snap
+      // --- STEP C: Open Snap Popup ---
       if (window.snap) {
         window.snap.pay(snap_token, {
           onSuccess: (result: any) => {
             console.log("Success:", result);
-            // Frontend HANYA refresh UI, jangan hit API update status
             onPaymentSuccess(result);
             setIsLoading(false);
           },
@@ -100,8 +108,8 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
             setIsLoading(false);
           },
           onError: (result: any) => {
-            console.error("Error:", result);
-            setErrorMessage("Pembayaran gagal atau ditolak.");
+            console.error("Midtrans Error:", result);
+            setErrorMessage("Payment failed or declined.");
             onPaymentError(result);
             setIsLoading(false);
           },
@@ -111,13 +119,35 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
           }
         });
       } else {
-        throw new Error("Midtrans gagal diinisialisasi.");
+        throw new Error("Midtrans failed to initialize (window.snap undefined).");
       }
 
     } catch (error: any) {
-      console.error("Payment Error:", error);
-      const msg = error.response?.data?.message || error.message || "Terjadi kesalahan sistem.";
-      setErrorMessage(msg);
+      // --- ROBUST ERROR HANDLING FOR 500 ERRORS ---
+      console.group("Payment Error Debugging");
+
+      if (axios.isAxiosError(error) && error.response) {
+        // The server responded with a status code other than 2xx
+        console.error("Server Status:", error.response.status);
+        console.error("Server Headers:", error.response.headers);
+        console.error("Server Data (Error Details):", error.response.data); // <--- CHECK THIS LOG
+
+        // Try to extract a meaningful message from the backend response
+        const backendMsg = error.response.data?.message || error.response.data?.error;
+        setErrorMessage(backendMsg ? `Server Error: ${backendMsg}` : `Server Error (${error.response.status})`);
+      
+      } else if (axios.isAxiosError(error) && error.request) {
+        // Request was made but no response received
+        console.error("No response received:", error.request);
+        setErrorMessage("No response from server. Check your internet connection.");
+      
+      } else {
+        // Something else happened
+        console.error("Error Message:", error.message);
+        setErrorMessage(error.message || "An unexpected system error occurred.");
+      }
+      
+      console.groupEnd();
       setIsLoading(false);
     }
   };

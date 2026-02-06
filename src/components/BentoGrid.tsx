@@ -20,7 +20,7 @@ export default function BentoGrid({ vehicles, onBooking }: BentoGridProps) {
           <Info className="text-zinc-600" size={32} />
         </div>
         <p className="text-zinc-500 font-black uppercase tracking-[0.5em] text-[10px]">
-          No units detected in pgAdmin database
+          No units detected in database
         </p>
       </div>
     );
@@ -29,23 +29,38 @@ export default function BentoGrid({ vehicles, onBooking }: BentoGridProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
       {memoizedVehicles.map((car, index) => {
+        // --- 1. IMAGE URL ---
         const imageUrl = car.img 
           ? (car.img.startsWith('http') ? car.img : `${STORAGE_URL}${car.img}`)
+          : (car as any).image_url // Fallback jika field dari backend 'image_url'
+          ? (car as any).image_url
           : 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=800';
 
-        // --- PENYESUAIAN PGADMIN: KOLOM is_available ---
-        // Di PostgreSQL/pgAdmin, kolom boolean akan datang sebagai true/false
-        // Jika kolom tersebut bertipe integer, maka (car as any).is_available === 1
-        const isAvailable = (car as any).is_available === true || (car as any).is_available === 1 || (car as any).is_available === "true";
+        // --- 2. LOGIKA STATUS (Sesuai Backend PHP) ---
+        // Backend mengirim: 'status' => 'Available' atau 'Booked'
+        const isAvailable = (car as any).status === 'Available';
 
+        // Backend mengirim: 'available_estimation' => "Tersedia dalam 2 Hari" / "Tersedia Besok"
+        const statusText = (car as any).available_estimation || 'Status Unknown';
+
+        // --- 3. HARGA ---
+        // Backend mengirim: "Rp 500.000" (String)
         const getDisplayPrice = () => {
-          const rawValue = car.price_per_day || (car as any).price || 0;
-          let num = typeof rawValue === 'string' 
-            ? parseFloat(rawValue.replace(/[^0-9.-]+/g, "")) 
-            : Number(rawValue);
-          if (num > 0 && num < 10000) num *= 1000;
-          return new Intl.NumberFormat('id-ID').format(num || 0);
+           const priceStr = (car as any).price_per_day || '';
+           if (typeof priceStr === 'string') {
+               // Hapus "Rp " agar kita bisa styling sendiri "IDR"-nya
+               return priceStr.replace('Rp ', '').trim();
+           }
+           return '0';
         };
+
+        // --- 4. SPEK (Sesuai Backend PHP) ---
+        // Note: Di PHP Anda set 'transmission' => $this->capacity
+        // Jadi angka kapasitas (Seats) ada di field transmission
+        const seatCount = (car as any).transmission || 5; 
+        
+        // Karena transmission dipakai buat capacity, kita default 'Auto' atau ambil dari field lain jika ada
+        const transmissionType = 'Auto'; 
 
         return (
           <div 
@@ -53,17 +68,19 @@ export default function BentoGrid({ vehicles, onBooking }: BentoGridProps) {
             className="group relative bg-zinc-950 border border-white/5 rounded-[3.5rem] overflow-hidden hover:border-blue-500/40 transition-all duration-700 shadow-2xl flex flex-col animate-in fade-in slide-in-from-bottom-12"
             style={{ animationDelay: `${index * 120}ms`, animationFillMode: 'both' }}
           >
-            {/* --- STATUS BADGE BERDASARKAN is_available --- */}
+            {/* --- STATUS BADGE --- */}
             <div className="absolute top-8 left-8 z-30">
-              <div className={`px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] backdrop-blur-md border shadow-2xl transition-colors duration-500 ${
+              <div className={`px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-[0.15em] backdrop-blur-md border shadow-2xl transition-colors duration-500 flex items-center gap-3 ${
                 isAvailable 
                   ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
                   : 'bg-red-500/10 text-red-500 border-red-500/20'
               }`}>
-                <span className={`inline-block w-2 h-2 rounded-full mr-2.5 ${
+                <span className={`inline-block w-2 h-2 rounded-full ${
                   isAvailable ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'
                 }`}></span>
-                {isAvailable ? 'Available' : 'Booked'} 
+                
+                {/* Menampilkan text dari Backend: "Tersedia dalam 2 Hari" */}
+                {statusText} 
               </div>
             </div>
 
@@ -109,11 +126,15 @@ export default function BentoGrid({ vehicles, onBooking }: BentoGridProps) {
               <div className="grid grid-cols-3 gap-3 py-6 border-y border-white/5">
                 <div className="flex flex-col items-center gap-2">
                   <Users size={18} className="text-zinc-600 group-hover:text-blue-500 transition-colors duration-500" />
-                  <span className="text-[10px] font-black text-zinc-400 uppercase tracking-tighter">{car.seats || '5'} PAX</span>
+                  <span className="text-[10px] font-black text-zinc-400 uppercase tracking-tighter">
+                    {seatCount} PAX
+                  </span>
                 </div>
                 <div className="flex flex-col items-center gap-2 border-x border-white/5">
                   <Gauge size={18} className="text-zinc-600 group-hover:text-blue-500 transition-colors duration-500" />
-                  <span className="text-[10px] font-black text-zinc-400 uppercase tracking-tighter">{car.transmission || 'Auto'}</span>
+                  <span className="text-[10px] font-black text-zinc-400 uppercase tracking-tighter">
+                    {transmissionType}
+                  </span>
                 </div>
                 <div className="flex flex-col items-center gap-2">
                   <Zap size={18} className="text-blue-600/50 group-hover:text-blue-400 group-hover:scale-110 transition-all duration-500" />
@@ -136,7 +157,7 @@ export default function BentoGrid({ vehicles, onBooking }: BentoGridProps) {
                   {isAvailable ? (
                     <>RESERVE NOW <ArrowUpRight size={18} className="group-hover/btn:translate-x-1 group-hover/btn:-translate-y-1 transition-transform" /></>
                   ) : (
-                    'UNIT DEPLOYED'
+                    statusText.toUpperCase() // Menampilkan "TERSEDIA BESOK" dll
                   )}
                 </span>
               </button>

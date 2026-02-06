@@ -153,40 +153,50 @@ export default function App() {
   // --- 3. Handlers ---
 
   const handleUpdateBookingStatus = async (id: string | number, newStatus: string) => {
-    // 1. Optimistic Update (Update UI duluan biar terasa cepat)
+    // 1. Simpan state lama untuk rollback jika gagal
     const originalBookings = [...bookings];
+    
+    // 2. Tentukan status untuk Backend (snake_case)
+    let statusForBackend = newStatus.toLowerCase();
+    
+    // Mapping khusus jika perlu (sesuaikan dengan ENUM di database Laravel Anda)
+    // Contoh: 'Completed' di UI -> 'finished' di DB
+    if (statusForBackend === 'active') statusForBackend = 'on_rent'; 
+    if (statusForBackend === 'completed') statusForBackend = 'finished';
+    if (statusForBackend === 'cancelled') statusForBackend = 'cancelled';
+
+    console.log(`Sending update for ID ${id}: ${statusForBackend}`);
+
+    // 3. Optimistic Update (UI berubah duluan agar terasa cepat)
     setBookings(prev => 
-      prev.map(b => b.id === id ? { ...b, status: newStatus as any } : b)
+      prev.map(b => b.id === id ? { ...b, status: statusForBackend as any } : b)
     );
 
     try {
-      // 2. Normalisasi Status
-      let statusForBackend = newStatus.toLowerCase(); 
-      
-      // Mapping khusus (Sesuaikan dengan Database Anda)
-      // Contoh: Jika di UI 'Active', di DB 'on_rent'
-      if (statusForBackend === 'active') statusForBackend = 'on_rent'; 
-      if (statusForBackend === 'completed') statusForBackend = 'finished';
-
-      console.log(`Updating ID ${id} to ${statusForBackend}...`);
-
-      // 3. Kirim Request PUT (JANGAN PAKAI POST)
-      // Hapus "_method: 'PUT'" karena kita sudah pakai method asli
-      await api.put(`/bookings/${id}`, { 
+      // 4. Kirim Request ke Backend
+      const response = await api.patch(`/admin/bookings/${id}/status`, { 
         status: statusForBackend 
       });
+
+      console.log("Server Response:", response.data);
       
-      console.log("Status updated successfully");
+      // 5. [PENTING] Update state dengan data ASLI dari response server
+      // Ini memastikan data di UI sinkron 100% dengan DB
+      if (response.data && response.data.data) {
+         const updatedBooking = response.data.data;
+         setBookings(prev => 
+            prev.map(b => b.id === id ? updatedBooking : b)
+         );
+      }
 
     } catch (error: any) {
-      console.error("Update Failed:", error);
+      console.error("Gagal Update:", error);
       
-      // Tampilkan pesan error
-      const msg = error.response?.data?.message || "Gagal update status";
+      const msg = error.response?.data?.message || "Gagal update status.";
       alert(msg);
 
-      // 4. Rollback (Kembalikan ke status lama jika gagal)
-      setBookings(originalBookings); 
+      // 6. Rollback ke data lama jika error
+      setBookings(originalBookings);
     }
   };
 
